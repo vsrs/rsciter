@@ -1,0 +1,34 @@
+<html>
+<style src="main.css"></style>
+<script src="main.js"></script>
+<script>
+    let nativeAlert = undefined;
+
+    function init(alertFn) {
+        nativeAlert = alertFn;
+    }
+
+    function alert(...args) {
+        if (nativeAlert) {
+            nativeAlert(...args);
+        }
+    }
+
+    function add(arg) {
+        const log = document.$("div.log");
+        log.append(<p>{arg}</p>);
+    }
+
+    document.on("keydown", function(evt) {
+        alert(evt.code);
+    });
+</script>
+
+<body>
+    <div .log></div>
+    <div #content>
+    Press keys to see them to the left.
+    </div>
+</body>
+
+</html>

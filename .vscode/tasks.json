@@ -1,0 +1,45 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "cargo",
+			"command": "build",
+			"args": ["--all-targets"],
+			"problemMatcher": [
+				"$rustc",
+				"$rust-panic"
+			],
+			"env": {
+				"SCITER_BIN_FOLDER": "C:\\Projects\\3rd\\sciter-js-sdk\\bin\\windows\\x64",
+			},
+			"group": "build",
+			"label": "rust: cargo build"
+		},
+		{
+			"type": "cargo",
+			"command": "build",
+			"args": ["--package", "manifest", "--release"],
+			"problemMatcher": [
+				"$rustc",
+				"$rust-panic"
+			],
+			"env": {
+				"SCITER_BIN_FOLDER": "C:\\Projects\\3rd\\sciter-js-sdk\\bin\\windows\\x64",
+			},
+			"group": "build",
+			"label": "rust: cargo build manifest release"
+		},
+		{
+			"type": "cargo",
+			"command": "test",
+			"problemMatcher": [
+				"$rustc",
+				"$rust-panic"
+			],
+			"env": {
+				"SCITER_BIN_FOLDER": "C:\\Projects\\3rd\\sciter-js-sdk\\bin\\windows\\x64",
+			},
+			"label": "rust: cargo test"
+		}
+	]
+}

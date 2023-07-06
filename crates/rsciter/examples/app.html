@@ -1,0 +1,39 @@
+<html>
+
+<head>
+  <script|module>
+    import * as env from "@env";
+    import * as sciter from "@sciter";
+
+    const info = document.$("#info");
+    info.append(`Version: ${sciter.VERSION}<br />`);
+    info.append(`Revision: ${sciter.REVISION}<br />`);
+    info.append(`Backend: ${Window.this.graphicsBackend}<br />`);
+
+    Window.this.state = Window.WINDOW_SHOWN;
+
+    for (let arg of env.arguments()) {
+      document.$("#args").append(arg + "<br />");
+    }
+  </script>
+
+  <script>
+      function toCall(arg1, arg2) {
+
+        return `Caption: ${Window.this.caption}, ${arg1}, ${arg2}`;
+      }
+
+      function throws() {
+        Window.this.caption = "called";
+        throw new Error('Error!!!');
+      }
+  </script>
+</head>
+
+<body>
+  <div#info />
+  <hr />
+  <div#args />
+</body>
+
+</html>

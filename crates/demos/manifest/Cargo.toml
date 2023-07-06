@@ -1,0 +1,13 @@
+[package]
+name = "manifest"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+rsciter = { path = "../../rsciter" }
+
+[build-dependencies]
+rsciter_ext = { path = "../../rsciter_ext" }
+
+[target."cfg(windows)".build-dependencies]
+winres = "0.1.12"

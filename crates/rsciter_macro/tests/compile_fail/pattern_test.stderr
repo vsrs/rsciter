@@ -1,0 +1,5 @@
+error: #[rsciter::xmod] Only simple parameter variable bindings are supported!
+ --> tests/compile_fail/pattern_test.rs:3:18
+  |
+3 |     pub fn test( &(x, y): &(i32, i32)) {
+  |                  ^

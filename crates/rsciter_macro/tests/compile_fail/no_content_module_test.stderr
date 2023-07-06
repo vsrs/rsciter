@@ -1,0 +1,13 @@
+error[E0658]: non-inline modules in proc macro input are unstable
+ --> tests/compile_fail/no_content_module_test.rs:4:1
+  |
+4 | mod no_content;
+  | ^^^^^^^^^^^^^^^
+  |
+  = note: see issue #54727 <https://github.com/rust-lang/rust/issues/54727> for more information
+
+error: the #[rsciter::xmod] attribute can only be applied to an inline module!
+ --> tests/compile_fail/no_content_module_test.rs:4:1
+  |
+4 | mod no_content;
+  | ^^^

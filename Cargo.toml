@@ -1,0 +1,8 @@
+[workspace]
+members = [ "crates/rsciter*", "crates/demos/*" ]
+resolver = "2" # to use the edition 2021 resolver
+
+[profile.release]
+lto = true          # Enable link-time optimization
+codegen-units = 1   # Reduce number of codegen units to increase optimizations
+strip = true        # Strip symbols from binary*

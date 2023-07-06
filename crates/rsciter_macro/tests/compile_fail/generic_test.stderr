@@ -1,0 +1,5 @@
+error: #[rsciter::xmod] Generic functions are not supported!
+ --> tests/compile_fail/generic_test.rs:3:16
+  |
+3 |     pub fn test<T: AsRef<str>>(_s: T) {
+  |                ^

@@ -1,0 +1,22 @@
+body {
+    background-color: aliceblue;
+    margin: 0;
+    flow: horizontal;
+}
+
+.log {
+    vertical-align: top;
+    overflow-y: auto;
+    flow: horizontal-wrap;
+}
+.log > p {
+    margin: 4;
+}
+
+div {
+    width: *;
+    height: *;
+    vertical-align: middle;
+    text-align: center;
+}
+

@@ -1,0 +1,10 @@
+{
+    "rust-analyzer.runnableEnv": [
+        {
+            "env": {
+                "SCITER_BIN_FOLDER" : "C:\\Projects\\3rd\\sciter-js-sdk\\bin\\windows\\x64",
+            }
+        }
+    ],
+    "cmake.configureOnOpen": false
+}

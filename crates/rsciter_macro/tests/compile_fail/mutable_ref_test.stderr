@@ -1,0 +1,5 @@
+error: #[rsciter::xmod] mutable references in function parameters are not supported!
+ --> tests/compile_fail/mutable_ref_test.rs:3:21
+  |
+3 |     pub fn test( x: &mut i32) {
+  |                     ^
