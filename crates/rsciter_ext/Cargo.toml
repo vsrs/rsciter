@@ -1,6 +1,9 @@
 [package]
 name = "rsciter_ext"
+description="rsciter build actions implementation"
+
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true

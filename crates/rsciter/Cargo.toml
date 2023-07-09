@@ -1,9 +1,12 @@
 [package]
 name = "rsciter"
+description = "Unofficial Rust bindings for Sciter"
+
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
 
 [dependencies]
 rsciter_macro.workspace = true

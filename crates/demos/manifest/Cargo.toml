@@ -1,5 +1,7 @@
 [package]
 name = "manifest"
+description="rsciter Windows demo"
+
 version.workspace = true
 authors.workspace = true
 edition.workspace = true

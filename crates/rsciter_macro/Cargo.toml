@@ -1,10 +1,12 @@
 [package]
 name = "rsciter_macro"
+description="rsciter macros implementation"
 
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
 
 [lib]
 proc-macro = true
