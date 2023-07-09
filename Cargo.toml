@@ -2,7 +2,23 @@
 members = [ "crates/rsciter*", "crates/demos/*" ]
 resolver = "2" # to use the edition 2021 resolver
 
+[workspace.package]
+edition = "2021"
+version = "0.0.0"
+license = "Apache-2.0"
+authors = ["Vit <vit@conrlab.com>"]
+
 [profile.release]
 lto = true          # Enable link-time optimization
 codegen-units = 1   # Reduce number of codegen units to increase optimizations
 strip = true        # Strip symbols from binary*
+
+[workspace.dependencies]
+# local crates
+rsciter_macro = { path = "./crates/rsciter_macro", version="0.0.0" }
+rsciter_ext = { path = "./crates/rsciter_ext", version="0.0.0"  }
+rsciter = { path = "./crates/rsciter", version="0.0.0" }
+
+# extertals
+thiserror = "1.0.40"
+cfg-if = "0.1"

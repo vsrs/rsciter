@@ -1,13 +1,15 @@
 [package]
 name = "manifest"
-version = "0.1.0"
-edition = "2021"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
 
 [dependencies]
-rsciter = { path = "../../rsciter" }
+rsciter.workspace = true
 
 [build-dependencies]
-rsciter_ext = { path = "../../rsciter_ext" }
+rsciter_ext.workspace = true
 
 [target."cfg(windows)".build-dependencies]
 winres = "0.1.12"

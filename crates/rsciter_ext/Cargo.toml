@@ -1,4 +1,6 @@
 [package]
 name = "rsciter_ext"
-version = "0.1.0"
-edition = "2021"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
