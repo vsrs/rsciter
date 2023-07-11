@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use crate::{bindings::*, Archive, Result, Value};
 
 use super::{AttachBehaviorRequest, AttachBehaviorResponse, HostNotifications};
@@ -29,7 +27,6 @@ pub trait XFunctionProvider: 'static {
 pub struct DefaultHost {
     archive_uri: String,
     archive: Option<Archive>,
-    functions: HashMap<String, Box<dyn XFunction>>,
 }
 
 impl Default for DefaultHost {
@@ -47,7 +44,6 @@ impl DefaultHost {
         Self {
             archive_uri: uri,
             archive: None,
-            functions: Default::default(),
         }
     }
 
@@ -59,10 +55,6 @@ impl DefaultHost {
 
         self.archive = Some(archive);
         Ok(())
-    }
-
-    pub(crate) fn set_functions(&mut self, functions: HashMap<String, Box<dyn XFunction>>) {
-        self.functions = functions
     }
 }
 

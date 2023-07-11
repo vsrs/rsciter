@@ -11,24 +11,20 @@ fn main() {
     }
 }
 
-// #[sciter::xmod(NativeModule)]
-// mod native {
-//     use rsciter::{Result,Value};
+#[rsciter::xmod]
+mod NativeModule {
+    pub fn sum(a: u64, b: u64) -> u64 {
+        a + b
+    }
 
-//     #[skip]
-//     pub fn sum(a: u64, b: u64) -> u64 {
-//         todo!()
-//     }
+    pub fn u64_to_str(a: u64) -> String {
+        format!("{a}")
+    }
 
-//     pub fn stringize(args: &[Value]) -> Result<Option<Value>> {
-//         todo!()
-//     }
-
-//     #[as(countZeroes)]
-//     pub fn count_zeroes(args: &[Value]) -> Result<Option<Value>> {
-//         todo!()
-//     }
-// }
+    pub fn i64_to_str(a: i64) -> String {
+        format!("{a}")
+    }
+}
 
 fn try_main() -> Result<i32> {
     app::init()?;
@@ -36,7 +32,7 @@ fn try_main() -> Result<i32> {
     let _window = Window::builder()
         .with_function("printArgs", print_args)
         .with_function("return13", |_args: &[Value]| Value::int(13).map(Some))
-        //        .with_module(NativeModule)
+        .with_module(NativeModule)
         .with_html(HTML)
         .build_main()?;
 
@@ -49,7 +45,6 @@ fn try_main() -> Result<i32> {
 
 fn print_args(args: &[Value]) -> Result<Option<Value>> {
     for arg in args {
-        println!("{}", arg.to_string_as(ToStringKind::JsonMap).unwrap());
         println!("{}", arg.to_string_as(ToStringKind::JsonLiteral).unwrap());
     }
 
@@ -62,10 +57,13 @@ const HTML: &[u8] = br#"
 <script>
     Window.this.state = Window.WINDOW_SHOWN;
 
-    printArgs(false);
-    printArgs("asdf");
-    printArgs({test: 12, arg: 'str', obj: { val: false }});
-    
+    const sum = Window.this.xcall("sum", 12, 12);
+    const u64 = Window.this.xcall("u64_to_str", 123456789);
+    const i64 = Window.this.xcall("i64_to_str", -123456789);
+    const closureValue = Window.this.xcall("return13");
+
+    Window.this.xcall("printArgs", false, sum, u64, i64, closureValue);
+   
 </script>
 </head>
 <body></body>

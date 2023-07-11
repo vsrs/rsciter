@@ -20,3 +20,5 @@ This is a work in progress library and is not yet ready for production use.
       pub fn user_name() -> String { ... }
   }
   ```
+
+  For details, see the [./crates/rsciter/examples/window_functions.rs](https://github.com/vsrs/rsciter/blob/master/crates/rsciter/examples/window_functions.rs#L15) sample.

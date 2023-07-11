@@ -5,8 +5,10 @@ use crate::{bindings::*, utf, AsAny};
 use super::WindowState;
 
 mod default;
+mod default_event_handler;
 
 pub use default::*;
+pub use default_event_handler::*;
 pub type LoadDataResult = SC_LOAD_DATA_RETURN_CODES;
 
 pub trait HostNotifications: AsAny {

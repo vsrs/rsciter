@@ -1,7 +1,10 @@
 use std::{collections::HashMap, pin::Pin};
 
 use super::{HostNotifications, Window, WindowDelegate, WindowFlags, WindowHandle, WindowState};
-use crate::{api::sapi, bindings::*, ArchiveData, DefaultHost, EventHandler, Result, XFunction};
+use crate::{
+    api::sapi, bindings::*, ArchiveData, DefaultEventHandler, DefaultHost, EventHandler, Result,
+    XFunction, XFunctionProvider,
+};
 
 // Some rust black magic to disallow
 // -  `with_html` and `with_file` simultaneous calls on the same builder object
@@ -92,10 +95,25 @@ impl<'b, const ANY_HOST: u8, const ANY_INITIAL_PAGE: u8>
         let api = sapi()?;
 
         let has_window_delegate = self.common.window_delegate.is_some();
+        let (host, default_event_handler) = self.host.get()?;
+        let event_handler = match (default_event_handler, self.common.event_handler) {
+            (None, None) => None,
+            (None, Some(user)) => Some(user),
+            (Some(default), None) => {
+                let handler: Box<dyn EventHandler> = Box::new(default);
+                Some(handler)
+            }
+            (Some(mut default), Some(user)) => {
+                default.set_custom_event_handler(user);
+                let handler: Box<dyn EventHandler> = Box::new(default);
+                Some(handler)
+            }
+        };
+
         let state = WindowState {
             delegate: self.common.window_delegate,
-            host: self.host.get()?,
-            event_handler: self.common.event_handler,
+            host,
+            event_handler,
         };
         let mut pinned = Box::pin(state);
         let state_ptr = unsafe { Pin::get_unchecked_mut(pinned.as_mut()) as *mut WindowState };
@@ -221,6 +239,7 @@ impl<'b, const ANY_INITIAL_PAGE: u8> WindowBuilder<'b, HOST_NONE, ANY_INITIAL_PA
                 archive_data: None,
                 archive_uri: None,
                 functions: Default::default(),
+                modules: Default::default(),
             },
         }
     }
@@ -231,6 +250,13 @@ impl<'b, const ANY_INITIAL_PAGE: u8> WindowBuilder<'b, HOST_NONE, ANY_INITIAL_PA
         func: impl XFunction,
     ) -> WindowBuilder<'b, HOST_DEFAULT, ANY_INITIAL_PAGE> {
         self.with_default_host().with_function(name, func)
+    }
+
+    pub fn with_module(
+        self,
+        provider: impl XFunctionProvider,
+    ) -> WindowBuilder<'b, HOST_DEFAULT, ANY_INITIAL_PAGE> {
+        self.with_default_host().with_module(provider)
     }
 }
 
@@ -263,6 +289,16 @@ impl<'b, const ANY_INITIAL_PAGE: u8> WindowBuilder<'b, HOST_DEFAULT, ANY_INITIAL
         match &mut self.host {
             Host::Default { functions, .. } => {
                 functions.insert(name.as_ref().to_string(), Box::new(func));
+            }
+            _ => unreachable!(),
+        }
+        self
+    }
+
+    pub fn with_module(mut self, provider: impl XFunctionProvider) -> Self {
+        match &mut self.host {
+            Host::Default { modules, .. } => {
+                modules.push(Box::new(provider));
             }
             _ => unreachable!(),
         }
@@ -301,18 +337,25 @@ enum Host {
         archive_data: Option<ArchiveData>,
         archive_uri: Option<String>,
         functions: HashMap<String, Box<dyn XFunction>>,
+        modules: Vec<Box<dyn XFunctionProvider>>,
     },
     Custom(Box<dyn HostNotifications>),
 }
 
 impl Host {
-    fn get(self) -> Result<Option<Box<dyn HostNotifications>>> {
+    fn get(
+        self,
+    ) -> Result<(
+        Option<Box<dyn HostNotifications>>,
+        Option<DefaultEventHandler>,
+    )> {
         match self {
-            Host::None => Ok(None),
+            Host::None => Ok((None, None)),
             Host::Default {
                 archive_data,
                 archive_uri,
                 functions,
+                modules,
             } => {
                 let mut host = archive_uri
                     .map(DefaultHost::with_archive_uri)
@@ -322,11 +365,15 @@ impl Host {
                     host.set_archive(archive_data)?;
                 }
 
-                host.set_functions(functions);
+                let handler = if !functions.is_empty() || !modules.is_empty() {
+                    Some(DefaultEventHandler::new(functions, modules))
+                } else {
+                    None
+                };
 
-                Ok(Some(Box::new(host)))
+                Ok((Some(Box::new(host)), handler))
             }
-            Host::Custom(host) => Ok(Some(host)),
+            Host::Custom(host) => Ok((Some(host), None)),
         }
     }
 }

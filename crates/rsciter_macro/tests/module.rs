@@ -2,7 +2,7 @@ use rsciter::{Error, Value, XFunctionProvider};
 
 #[rsciter::xmod]
 mod NativeModule {
-    use rsciter::{Value, Result};
+    use rsciter::{Result, Value};
 
     pub fn no_args() {}
 
