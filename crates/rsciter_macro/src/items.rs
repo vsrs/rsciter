@@ -52,8 +52,6 @@ impl<'m> MethodInfo<'m> {
                             return Err(::rsciter::Error::ScriptingInvalidArgCount(#method_name .to_string()))
                         }
 
-                        use rsciter::FromValue;
-
                         #(#convertions)*
                     }
                 },
@@ -74,7 +72,7 @@ impl<'m> MethodInfo<'m> {
             quote! {
                 #prelude
                 let result = #prefix #method ( #args );
-                result.try_into()
+                ::rsciter::ToValue::to_value(result).map(|res| Some(res))
             }
         }
     }
@@ -151,11 +149,11 @@ impl ArgInfo<'_> {
 
         match path {
             Some(path) if Self::last_segment_is(path, "str") => quote! {
-                let #ident = String::from_value(&args[#idx])?;
+                let #ident = <String as ::rsciter::FromValue>::from_value(&args[#idx])?;
             },
 
             Some(path) if !Self::last_segment_is(path, "Value") => quote! {
-                let #ident = #path :: from_value(&args[#idx])?;
+                let #ident = <#path as ::rsciter::FromValue> :: from_value(&args[#idx])?;
             },
 
             _ => quote! {

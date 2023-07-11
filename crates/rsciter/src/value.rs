@@ -31,6 +31,12 @@ impl Value {
         Ok(this)
     }
 
+    pub fn int64(v: i64) -> Result<Self> {
+        let mut this = Self::new();
+        sapi()?.value_int64_data_set(&mut this.0, v, VALUE_TYPE::T_BIG_INT, None)?;
+        Ok(this)
+    }
+
     pub fn float(v: f64) -> Result<Self> {
         let mut this = Self::new();
         sapi()?.value_float_data_set(&mut this.0, v, VALUE_TYPE::T_FLOAT, None)?;
@@ -468,25 +474,94 @@ pub trait FromValue<'a>: Sized {
     fn from_value(value: &'a Value) -> Result<Self>;
 }
 
-macro_rules! impl_primitive {
-    ($type:ty, $fn:ident) => {
+pub trait ToValue: Sized {
+    fn to_value(val: Self) -> Result<Value>;
+}
+
+macro_rules! impl_from {
+    ($type:ty, $from:ident) => {
         impl FromValue<'_> for $type {
             fn from_value(value: &Value) -> Result<Self> {
-                value.$fn()
+                value.$from()
+            }
+        }
+
+        impl TryFrom<Value> for $type {
+            type Error = Error;
+
+            fn try_from(val: Value) -> Result<Self> {
+                FromValue::from_value(&val)
+            }
+        }
+
+        impl TryFrom<&Value> for $type {
+            type Error = Error;
+
+            fn try_from(val: &Value) -> Result<Self> {
+                FromValue::from_value(val)
+            }
+        }
+    };
+}
+
+macro_rules! impl_primitive {
+    ($type:ty, $from:ident, $val: ident, $to:expr) => {
+        impl_from!($type, $from);
+
+        impl TryFrom<$type> for Value {
+            type Error = Error;
+
+            fn try_from($val: $type) -> Result<Self> {
+                $to
+            }
+        }
+
+        impl ToValue for $type {
+            fn to_value(val: Self) -> Result<Value> {
+                Value::try_from(val)
             }
         }
     };
 }
 
 // https://doc.rust-lang.org/std/macro.concat_idents.html is unstable
-impl_primitive!(bool, get_bool);
-impl_primitive!(i16, get_i16);
-impl_primitive!(u16, get_u16);
-impl_primitive!(i32, get_i32);
-impl_primitive!(u32, get_u32);
-impl_primitive!(i64, get_i64);
-impl_primitive!(u64, get_u64);
-impl_primitive!(String, get_string);
+impl_primitive!(bool, get_bool, val, Value::bool(val));
+impl_primitive!(i16, get_i16, val, Value::int(val.into()));
+impl_primitive!(u16, get_u16, val, Value::int(val.into()));
+impl_primitive!(i32, get_i32, val, Value::int(val));
+impl_primitive!(u32, get_u32, val, Value::int(val as i32));
+impl_primitive!(i64, get_i64, val, Value::int64(val));
+impl_primitive!(u64, get_u64, val, Value::int64(val as i64));
+
+impl_from!(String, get_string);
+
+impl TryFrom<&str> for Value {
+    type Error = Error;
+
+    fn try_from(val: &str) -> Result<Self> {
+        Value::string(val)
+    }
+}
+
+impl ToValue for &str {
+    fn to_value(val: Self) -> Result<Value> {
+        Value::try_from(val)
+    }
+}
+
+impl TryFrom<String> for Value {
+    type Error = Error;
+
+    fn try_from(val: String) -> Result<Self> {
+        Value::string(&val)
+    }
+}
+
+impl ToValue for String {
+    fn to_value(val: Self) -> Result<Value> {
+        Value::try_from(val)
+    }
+}
 
 impl FromValue<'_> for Value {
     fn from_value(value: &Value) -> Result<Self> {
@@ -830,11 +905,22 @@ pub mod tests {
     }
 
     #[test]
-    fn test_try_into_u64() {
+    fn test_u64_from_value() {
         update_path();
         let val = Value::int(32).unwrap();
         let v: u64 = FromValue::from_value(&val).unwrap();
 
         assert_eq!(v, 32);
     }
+
+    #[test]
+    fn test_u64_to_value() {
+        update_path();
+        let val = ToValue::to_value(64).unwrap();
+        let x: i32 = FromValue::from_value(&val).unwrap();
+
+        assert_eq!(x, 64);
+    }
+
+    // TODO: more tests
 }

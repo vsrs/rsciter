@@ -24,6 +24,10 @@ mod NativeModule {
     }
 
     fn private() {}
+
+    pub fn with_ret() -> i32 {
+        42
+    }
 }
 
 #[test]
