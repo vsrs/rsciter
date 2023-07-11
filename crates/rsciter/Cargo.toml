@@ -1,6 +1,7 @@
 [package]
 name = "rsciter"
 description = "Unofficial Rust bindings for Sciter"
+readme = "../../README.md"
 
 version.workspace = true
 authors.workspace = true
