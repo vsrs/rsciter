@@ -2,7 +2,7 @@ use rsciter::{Error, Value, XFunctionProvider};
 
 #[rsciter::xmod]
 mod NativeModule {
-    use rsciter::Value;
+    use rsciter::{Value, Result};
 
     pub fn no_args() {}
 
@@ -25,8 +25,16 @@ mod NativeModule {
 
     fn private() {}
 
-    pub fn with_ret() -> i32 {
+    pub fn ret_i32() -> i32 {
         42
+    }
+
+    pub fn ret_value(arg: Value) -> Value {
+        arg
+    }
+
+    pub fn ret_res_value() -> Result<Value> {
+        Value::int(11)
     }
 }
 

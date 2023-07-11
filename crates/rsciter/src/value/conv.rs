@@ -105,3 +105,21 @@ impl<'v> FromValue<'v> for &'v Value {
         Ok(value)
     }
 }
+
+impl ToValue for Value {
+    fn to_value(val: Self) -> Result<Value> {
+        Ok(val)
+    }
+}
+
+impl ToValue for &Value {
+    fn to_value(val: Self) -> Result<Value> {
+        val.make_copy()
+    }
+}
+
+impl ToValue for Result<Value> {
+    fn to_value(val: Self) -> Result<Value> {
+        val
+    }
+}
