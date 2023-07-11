@@ -111,7 +111,7 @@ impl<'m> MethodInfo<'m> {
                     let arg_info = ArgInfo {
                         arg,
                         ident,
-                        pat_type: &*typed.ty,
+                        pat_type: &typed.ty,
                     };
                     res.push(arg_info)
                 }
@@ -164,7 +164,7 @@ impl ArgInfo<'_> {
 
     fn last_segment_is(path: &TypePath, val: &str) -> bool {
         if let Some(last) = path.path.segments.last() {
-            if last.ident.to_string() == val {
+            if last.ident == val {
                 return true;
             }
         }

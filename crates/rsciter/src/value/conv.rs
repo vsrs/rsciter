@@ -84,7 +84,7 @@ impl TryFrom<String> for Value {
     type Error = Error;
 
     fn try_from(val: String) -> Result<Self> {
-        Value::string(&val)
+        Value::string(val)
     }
 }
 

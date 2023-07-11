@@ -1,6 +1,5 @@
 use proc_macro2::{Ident, Span};
 use quote::{format_ident, quote};
-use syn;
 use syn::{spanned::Spanned, Visibility};
 
 use super::items::MethodInfo;

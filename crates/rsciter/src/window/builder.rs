@@ -95,8 +95,8 @@ impl<'b, const ANY_HOST: u8, const ANY_INITIAL_PAGE: u8>
         let api = sapi()?;
 
         let has_window_delegate = self.common.window_delegate.is_some();
-        let (host, default_event_handler) = self.host.get()?;
-        let event_handler = match (default_event_handler, self.common.event_handler) {
+        let host_info = self.host.get()?;
+        let event_handler = match (host_info.event_handler, self.common.event_handler) {
             (None, None) => None,
             (None, Some(user)) => Some(user),
             (Some(default), None) => {
@@ -112,7 +112,7 @@ impl<'b, const ANY_HOST: u8, const ANY_INITIAL_PAGE: u8>
 
         let state = WindowState {
             delegate: self.common.window_delegate,
-            host,
+            host: host_info.host,
             event_handler,
         };
         let mut pinned = Box::pin(state);
@@ -342,15 +342,48 @@ enum Host {
     Custom(Box<dyn HostNotifications>),
 }
 
+struct HostInfo {
+    host: Option<Box<dyn HostNotifications>>,
+    event_handler: Option<DefaultEventHandler>,
+}
+
+impl HostInfo {
+    fn new(
+        host: Box<dyn HostNotifications>,
+        functions: HashMap<String, Box<dyn XFunction>>,
+        modules: Vec<Box<dyn XFunctionProvider>>,
+    ) -> Self {
+        let event_handler = if !functions.is_empty() || !modules.is_empty() {
+            Some(DefaultEventHandler::new(functions, modules))
+        } else {
+            None
+        };
+
+        Self {
+            host: Some(host),
+            event_handler,
+        }
+    }
+
+    fn with_host(host: Box<dyn HostNotifications>) -> Self {
+        Self {
+            host: Some(host),
+            event_handler: None,
+        }
+    }
+
+    pub fn none() -> Self {
+        Self {
+            host: None,
+            event_handler: None,
+        }
+    }
+}
+
 impl Host {
-    fn get(
-        self,
-    ) -> Result<(
-        Option<Box<dyn HostNotifications>>,
-        Option<DefaultEventHandler>,
-    )> {
+    fn get(self) -> Result<HostInfo> {
         match self {
-            Host::None => Ok((None, None)),
+            Host::None => Ok(HostInfo::none()),
             Host::Default {
                 archive_data,
                 archive_uri,
@@ -365,15 +398,9 @@ impl Host {
                     host.set_archive(archive_data)?;
                 }
 
-                let handler = if !functions.is_empty() || !modules.is_empty() {
-                    Some(DefaultEventHandler::new(functions, modules))
-                } else {
-                    None
-                };
-
-                Ok((Some(Box::new(host)), handler))
+                Ok(HostInfo::new(Box::new(host), functions, modules))
             }
-            Host::Custom(host) => Ok((Some(host), None)),
+            Host::Custom(host) => Ok(HostInfo::with_host(host)),
         }
     }
 }
