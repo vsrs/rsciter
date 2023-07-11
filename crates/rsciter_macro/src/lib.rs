@@ -20,15 +20,11 @@ pub fn xmod(attr: TokenStream, input: TokenStream) -> TokenStream {
 }
 
 fn xmod_impl(attr: TokenStream2, input: TokenStream2) -> syn::Result<TokenStream2> {
+    const MESSAGE: &str = "the #[rsciter::xmod] attribute can only be applied to an inline module!";
+
     match syn::parse2::<syn::ItemMod>(input) {
-        Ok(m) if m.content.is_none() => Err(syn::Error::new(
-            m.span(),
-            "the #[rsciter::xmod] attribute can only be applied to an inline module!",
-        )),
-        Err(e) => Err(syn::Error::new(
-            e.span(),
-            format!("{e}: the #[rsciter::xmod] attribute can only be applied to an inline module!"),
-        )),
+        Ok(m) if m.content.is_none() => Err(syn::Error::new(m.span(), MESSAGE)),
+        Err(e) => Err(syn::Error::new(e.span(), format!("{e}: {MESSAGE}"))),
         Ok(mut module) => {
             let mut struct_name = attr.to_string();
             if struct_name.is_empty() {
@@ -46,7 +42,7 @@ fn xmod_impl(attr: TokenStream2, input: TokenStream2) -> syn::Result<TokenStream
             Ok(quote!(
                 #[allow(non_snake_case)]
                 #[allow(dead_code)]
-                #module // TODO: remove attrs like #[tranparent]
+                #module // TODO: remove attrs like #[transparent]
 
                 #vis struct #provider_struct_name;
 

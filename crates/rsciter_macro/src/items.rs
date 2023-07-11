@@ -84,7 +84,10 @@ impl<'m> MethodInfo<'m> {
         for arg in method.sig.inputs.iter() {
             match arg {
                 FnArg::Receiver(s) => {
-                    return Err(syn::Error::new(s.span(), "#[rsciter::xmod] self parameter is not supported"));
+                    return Err(syn::Error::new(
+                        s.span(),
+                        "#[rsciter::xmod] self parameter is not supported",
+                    ));
                 }
                 FnArg::Typed(typed) => {
                     match typed.ty.as_ref() {

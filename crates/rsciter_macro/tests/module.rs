@@ -1,4 +1,4 @@
-use rsciter::{Error, XFunctionProvider, Value};
+use rsciter::{Error, Value, XFunctionProvider};
 
 #[rsciter::xmod]
 mod NativeModule {
