@@ -72,7 +72,7 @@ impl<'m> MethodInfo<'m> {
             quote! {
                 #prelude
                 let result = #prefix #method ( #args );
-                ::rsciter::ToValue::to_value(result).map(|res| Some(res))
+                ::rsciter::conv::ToValue::to_value(result).map(|res| Some(res))
             }
         }
     }
@@ -149,15 +149,15 @@ impl ArgInfo<'_> {
 
         match path {
             Some(path) if Self::last_segment_is(path, "str") => quote! {
-                let #ident = <String as ::rsciter::FromValue>::from_value(&args[#idx])?;
+                let #ident = <String as ::rsciter::conv::FromValue>::from_value(&args[#idx])?;
             },
 
             Some(path) if !Self::last_segment_is(path, "Value") => quote! {
-                let #ident = <#path as ::rsciter::FromValue> :: from_value(&args[#idx])?;
+                let #ident = <#path as ::rsciter::conv::FromValue> :: from_value(&args[#idx])?;
             },
 
             _ => quote! {
-                let #ident = ::rsciter::FromValue::from_value(&args[#idx])?;
+                let #ident = ::rsciter::conv::FromValue::from_value(&args[#idx])?;
             },
         }
     }
