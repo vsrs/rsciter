@@ -4,7 +4,7 @@ resolver = "2" # to use the edition 2021 resolver
 
 [workspace.package]
 edition = "2021"
-version = "0.0.2"
+version = "0.0.3"
 license = "Apache-2.0"
 authors = ["Vit <vit@conrlab.com>"]
 repository = "https://github.com/vsrs/rsciter"
@@ -16,9 +16,9 @@ strip = true        # Strip symbols from binary*
 
 [workspace.dependencies]
 # local crates
-rsciter_macro = { path = "./crates/rsciter_macro", version="=0.0.2" }
-rsciter_ext = { path = "./crates/rsciter_ext", version="=0.0.2"  }
-rsciter = { path = "./crates/rsciter", version="=0.0.2" }
+rsciter_macro = { path = "./crates/rsciter_macro", version="=0.0.3" }
+rsciter_ext = { path = "./crates/rsciter_ext", version="=0.0.3"  }
+rsciter = { path = "./crates/rsciter", version="=0.0.3" }
 
 # extertals
 thiserror = "1.0.40"
