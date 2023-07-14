@@ -13,17 +13,18 @@ pub fn find_packfolder() -> PathBuf {
 
     if let Ok(bin) = env::var("SCITER_BIN_FOLDER") {
         folder = Path::new(&bin).join("..");
-    } else if let Ok(sdk) = env::var("SCITER_SDK") {
-        if cfg!(windows) {
-            folder = Path::new(&sdk).join("bin/windows/");
-        } else if cfg!(target_os = "macos") {
-            folder = Path::new(&sdk).join("bin/macosx/");
-        } else if cfg!(target_os = "linux") {
-            folder = Path::new(&sdk).join("bin/linux/");
-        } else {
-            unimplemented!("Unsupported OS!");
-        }
     }
+    // } else if let Ok(sdk) = env::var("SCITER_SDK") {
+    //     if cfg!(windows) {
+    //         folder = Path::new(&sdk).join("bin/windows/");
+    //     } else if cfg!(target_os = "macos") {
+    //         folder = Path::new(&sdk).join("bin/macosx/");
+    //     } else if cfg!(target_os = "linux") {
+    //         folder = Path::new(&sdk).join("bin/linux/");
+    //     } else {
+    //         unimplemented!("Unsupported OS!");
+    //     }
+    // }
 
     // if folder is empty, assume packfolder in PATH
 
@@ -31,7 +32,10 @@ pub fn find_packfolder() -> PathBuf {
 }
 
 pub fn pack_folder(folder: impl AsRef<Path>, to: impl AsRef<Path>) -> std::io::Result<ExitStatus> {
-    let packfolder = find_packfolder();
+    let packfolder = find_packfolder().canonicalize().unwrap();
+
+    eprintln!("tool: {}", packfolder.display());
+
     Command::new(packfolder)
         .arg(folder.as_ref())
         .arg(to.as_ref())

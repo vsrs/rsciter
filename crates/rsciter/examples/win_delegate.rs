@@ -3,9 +3,6 @@ use std::collections::HashSet;
 use rsciter::*;
 
 fn main() {
-    #[cfg(any(test, debug_assertions))]
-    rsciter::update_path();
-
     if let Err(e) = try_main() {
         eprintln!("Error: {e}");
     } else {

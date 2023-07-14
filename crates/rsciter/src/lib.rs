@@ -22,30 +22,12 @@ pub type Result<T> = std::result::Result<T, Error>;
 // reexport macros
 pub use rsciter_macro::xmod;
 
-#[cfg(any(test, debug_assertions))]
-pub fn update_path() {
-    use std::env;
-
-    if let Ok(bin) = env::var("SCITER_BIN_FOLDER") {
-        if let Some(path) = env::var_os("PATH") {
-            let mut paths: Vec<_> = env::split_paths(&path).collect();
-            paths.push(bin.into());
-            let new_path = env::join_paths(paths).unwrap();
-            env::set_var("PATH", new_path);
-        }
-    }
-}
-
 #[cfg(test)]
 pub mod tests {
     use crate::api::{sapi, VersionKind};
 
-    use super::*;
-
     #[test]
     fn test() {
-        update_path();
-
         let api = sapi().unwrap();
         let v0 = api.sciter_version(VersionKind::MAJOR).unwrap();
         let v1 = api.sciter_version(VersionKind::MINOR).unwrap();

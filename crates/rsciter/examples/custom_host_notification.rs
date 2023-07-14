@@ -1,10 +1,6 @@
 use rsciter::{bindings::*, *};
-use windows::Win32::UI::WindowsAndMessaging::WM_KEYDOWN;
 
 fn main() {
-    #[cfg(any(test, debug_assertions))]
-    rsciter::update_path();
-
     if let Err(e) = try_main() {
         eprintln!("Error: {e}");
     } else {
@@ -12,17 +8,21 @@ fn main() {
     }
 }
 
-const VK_SPACE: WPARAM = WPARAM(0x20);
-
 fn try_main() -> Result<i32> {
     app::init()?;
 
     let window = Window::builder()
         .with_host(Host)
         .with_file("./the/path/might/not/exist.html")
-        .with_window_delegate(|w: WindowHandle, msg, wp: WPARAM, _lp| {
-            if WM_KEYDOWN == msg && wp == VK_SPACE {
-                let _ = w.notify_host(1, 2, 20);
+        .with_window_delegate(|_w: WindowHandle, _msg, _wp: WPARAM, _lp| {
+            #[cfg(target_os = "windows")]
+            {
+                use windows::Win32::UI::WindowsAndMessaging::WM_KEYDOWN;
+                const VK_SPACE: WPARAM = WPARAM(0x20);
+
+                if WM_KEYDOWN == _msg && _wp == VK_SPACE {
+                    let _ = _w.notify_host(1, 2, 20);
+                }    
             }
 
             (false, Default::default())

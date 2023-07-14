@@ -60,8 +60,6 @@ fn test_second_fail() {
 
 #[test]
 fn test_second() {
-    rsciter::update_path();
-
     let x = Value::int(12).unwrap();
     let x_ref = Value::int(33).unwrap();
 
@@ -71,8 +69,6 @@ fn test_second() {
 
 #[test]
 fn test_value() {
-    rsciter::update_path();
-
     let v = Value::int(31).unwrap();
     let v_ref = Value::string("str").unwrap();
 
@@ -82,8 +78,6 @@ fn test_value() {
 
 #[test]
 fn test_string() {
-    rsciter::update_path();
-
     let s = Value::string("String").unwrap();
     let s_ref = Value::string("&String").unwrap();
     let str_ref = Value::string("&str").unwrap();

@@ -5,9 +5,6 @@ const DATA: &'static [u8] = include_bytes!("archive.res");
 
 #[test]
 fn test_static_archive() {
-    #[cfg(any(test, debug_assertions))]
-    rsciter::update_path();
-
     let mut arch = Archive::open_static(DATA).unwrap();
     let main = arch.get("main.html").unwrap();
     let js = arch.get("main.js").unwrap();
@@ -24,9 +21,6 @@ fn test_static_archive() {
 
 #[test]
 fn test_archive() {
-    #[cfg(any(test, debug_assertions))]
-    rsciter::update_path();
-
     let data = DATA.to_vec();
     let mut arch = Archive::open(data).unwrap();
     let main = arch.get("main.html").unwrap();

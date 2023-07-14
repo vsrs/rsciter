@@ -27,8 +27,13 @@ pub fn sapi() -> Result<Api<'static>> {
 
 fn load_sciter_api() -> Result<*mut ISciterAPI> {
     unsafe {
-        let lib = libloading::Library::new(SCITER_DLL_NAME)
-            .map_err(|err| Error::library(SCITER_DLL_NAME, err))?;
+        let lib = if let Ok(bin) = std::env::var("SCITER_BIN_FOLDER") {
+            let full = format!("{}/{SCITER_DLL_NAME}", bin);
+            libloading::Library::new(&full)
+        } else {
+            libloading::Library::new(SCITER_DLL_NAME)
+        };
+        let lib = lib.map_err(|err| Error::library(SCITER_DLL_NAME, err))?;
         let func: libloading::Symbol<unsafe extern "system" fn() -> *mut ISciterAPI> = lib
             .get(b"SciterAPI")
             .map_err(|err| Error::symbol("SciterAPI", err))?;

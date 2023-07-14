@@ -27,18 +27,55 @@ cfg_if::cfg_if! {
 
         pub const SCITER_DLL_NAME: &str = "sciter.dll";
     }
-    else if #[cfg(target_os="android")] {
-        pub use HWND = isize;
-        pub const SCITER_DLL_NAME: &str = "libsciter.so";
-    }
-    else if #[cfg(target_os="linux")] {
-        pub use HWND = isize;
+    else {
+        pub type HWND = isize;
 
-        pub const SCITER_DLL_NAME: &str = "libsciter.so";
-    }
-    else if #[cfg(target_os="macos")] {
-        pub use HWND = isize;
+        #[derive(Default, Clone, Copy, PartialEq, Eq)]
+        #[repr(C)]
+        pub struct POINT {
+            pub x: i32,
+            pub y: i32,
+        }
 
-        pub const SCITER_DLL_NAME: &str = "libsciter.dylib";
+        #[derive(Default, Clone, Copy, PartialEq, Eq)]
+        #[repr(C)]
+        pub struct SIZE {
+            pub cx: i32,
+            pub cy: i32,
+        }
+
+        #[derive(Default, Clone, Copy, PartialEq, Eq)]
+        #[repr(C)]
+        pub struct RECT {
+            pub left: i32,
+            pub top: i32,
+            pub right: i32,
+            pub bottom: i32,
+        }
+
+        #[derive(Default, Clone, Copy, PartialEq, Eq)]
+        #[repr(transparent)]
+        pub struct WPARAM(pub usize);
+
+        #[derive(Default, Clone, Copy, PartialEq, Eq)]
+        #[repr(transparent)]
+        pub struct LPARAM(pub isize);
+
+        #[derive(Default, Clone, Copy, PartialEq, Eq)]
+        #[repr(transparent)]
+        pub struct LRESULT(pub isize);
+
+        // just to make rustc happy:
+        pub struct MSG;
+        pub struct IUnknown;
+
+        cfg_if::cfg_if! {
+            if #[cfg(any(target_os="android", target_os="linux"))] {
+                pub const SCITER_DLL_NAME: &str = "libsciter.so";
+            }
+            else if #[cfg(target_os="macos")] {
+                pub const SCITER_DLL_NAME: &str = "libsciter.dylib";
+            }    
+        }
     }
 }

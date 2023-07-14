@@ -574,15 +574,11 @@ pub(crate) fn args_as_raw_slice(args: &[Value]) -> &[VALUE] {
 pub mod tests {
     use std::{cell::RefCell, rc::Rc};
 
-    use crate::update_path;
-
     use super::conv::*;
     use super::*;
 
     #[test]
     fn test_new() {
-        update_path();
-
         let val = Value::new();
 
         assert!(val.is_undefined());
@@ -593,8 +589,6 @@ pub mod tests {
     #[test]
     #[should_panic]
     fn test_undefined_incompatible_bool() {
-        update_path();
-
         let val = Value::new();
         let _v = val.get_bool().unwrap();
     }
@@ -602,16 +596,12 @@ pub mod tests {
     #[test]
     #[should_panic = "called `Result::unwrap()` on an `Err` value: ValueError(IncompatibleType)"]
     fn test_undefined_incompatible_int() {
-        update_path();
-
         let val = Value::new();
         val.get_i32().unwrap();
     }
 
     #[test]
     fn test_bool() {
-        update_path();
-
         let val = Value::bool(true).unwrap();
 
         assert_eq!(val.get_bool().unwrap(), true);
@@ -626,8 +616,6 @@ pub mod tests {
     #[test]
     #[should_panic = "called `Result::unwrap()` on an `Err` value: ValueError(IncompatibleType)"]
     fn test_bool_incompatible_int64() {
-        update_path();
-
         let val = Value::bool(true).unwrap();
 
         val.get_u64().unwrap();
@@ -635,8 +623,6 @@ pub mod tests {
 
     #[test]
     fn test_array() {
-        update_path();
-
         let v1 = Value::int(1).unwrap();
         let v2 = Value::int(2).unwrap();
         let v_true = Value::bool(true).unwrap();
@@ -668,8 +654,6 @@ pub mod tests {
 
     #[test]
     fn test_map() {
-        update_path();
-
         let v1 = Value::int(1).unwrap();
         let v2 = Value::int(2).unwrap();
         let v_true = Value::bool(false).unwrap();
@@ -704,8 +688,6 @@ pub mod tests {
 
     #[test]
     fn test_take() {
-        update_path();
-
         let val = Value::string("asdf".to_string()).unwrap();
         let v = val.take();
 
@@ -716,8 +698,6 @@ pub mod tests {
 
     #[test]
     fn test_functor() {
-        update_path();
-
         struct F {
             invoked: bool,
             dropped: Rc<RefCell<bool>>,
@@ -756,8 +736,6 @@ pub mod tests {
 
     #[test]
     fn test_functor_arg() {
-        update_path();
-
         let func = Value::functor(|args: &[Value]| {
             assert_eq!(args.len(), 1);
 
@@ -772,8 +750,6 @@ pub mod tests {
 
     #[test]
     fn test_functor_args() {
-        update_path();
-
         let func = Value::functor(|args: &[Value]| {
             assert_eq!(args.len(), 3);
 
@@ -804,7 +780,6 @@ pub mod tests {
 
     #[test]
     fn test_u64_from_value() {
-        update_path();
         let val = Value::int(32).unwrap();
         let v: u64 = FromValue::from_value(&val).unwrap();
 
@@ -813,7 +788,6 @@ pub mod tests {
 
     #[test]
     fn test_u64_to_value() {
-        update_path();
         let val = ToValue::to_value(64).unwrap();
         let x: i32 = FromValue::from_value(&val).unwrap();
 
