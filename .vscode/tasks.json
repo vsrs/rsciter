@@ -1,5 +1,19 @@
 {
 	"version": "2.0.0",
+	"windows": {
+		"options": {
+			"env": {
+				"SCITER_BIN_FOLDER": "C:\\Projects\\3rd\\sciter-js-sdk\\bin\\windows\\x64"
+			}
+		}
+	},
+	"linux": {
+		"options": {
+			"env": {
+				"SCITER_BIN_FOLDER": "/home/vit/Projects/sciter/sciter-js-sdk/bin/linux/x64"
+			}
+		}
+	},
 	"tasks": [
 		{
 			"type": "cargo",
@@ -9,10 +23,6 @@
 				"$rustc",
 				"$rust-panic"
 			],
-			"env": {
-				// "SCITER_BIN_FOLDER": "C:\\Projects\\3rd\\sciter-js-sdk\\bin\\windows\\x64",
-				"SCITER_BIN_FOLDER": "/home/vit/Projects/sciter/sciter-js-sdk/bin/linux/x64",
-			},
 			"group": "build",
 			"label": "rust: cargo build"
 		},
@@ -24,10 +34,6 @@
 				"$rustc",
 				"$rust-panic"
 			],
-			"env": {
-				// "SCITER_BIN_FOLDER": "C:\\Projects\\3rd\\sciter-js-sdk\\bin\\windows\\x64",
-				"SCITER_BIN_FOLDER": "/home/vit/Projects/sciter/sciter-js-sdk/bin/linux/x64",
-			},
 			"group": "build",
 			"label": "rust: cargo build manifest release"
 		},
@@ -38,10 +44,6 @@
 				"$rustc",
 				"$rust-panic"
 			],
-			"env": {
-				// "SCITER_BIN_FOLDER": "C:\\Projects\\3rd\\sciter-js-sdk\\bin\\windows\\x64",
-				"SCITER_BIN_FOLDER": "/home/vit/Projects/sciter/sciter-js-sdk/bin/linux/x64",
-			},
 			"label": "rust: cargo test"
 		}
 	]
