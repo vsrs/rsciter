@@ -75,7 +75,7 @@ cfg_if::cfg_if! {
             }
             else if #[cfg(target_os="macos")] {
                 pub const SCITER_DLL_NAME: &str = "libsciter.dylib";
-            }    
+            }
         }
     }
 }

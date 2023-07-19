@@ -20,7 +20,7 @@ fn try_main() -> Result<i32> {
 
                 if WM_KEYDOWN == _msg && _wp == VK_ESCAPE {
                     let _ = _w.collapse();
-                }    
+                }
             }
 
             (false, Default::default())

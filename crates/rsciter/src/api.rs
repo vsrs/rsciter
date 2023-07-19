@@ -1,11 +1,7 @@
 #![allow(clippy::not_unsafe_ptr_arg_deref)]
 
-use std::{
-    mem::MaybeUninit,
-    sync::atomic::{AtomicPtr, Ordering},
-};
-
 use crate::{args_as_raw_slice, bindings::*, utf, Error, EventGroups, Result, Value, ValueError};
+use std::mem::MaybeUninit;
 
 mod graphics;
 mod request;
@@ -13,35 +9,53 @@ mod request;
 pub use graphics::*;
 pub use request::*;
 
-pub fn sapi() -> Result<Api<'static>> {
-    static API: AtomicPtr<ISciterAPI> = AtomicPtr::new(core::ptr::null_mut());
+cfg_if::cfg_if! {
+    if #[cfg(feature = "dynamic")] {
+        pub fn sapi() -> Result<Api<'static>> {
+            use std::sync::atomic::{AtomicPtr, Ordering};
 
-    let mut ptr = API.load(Ordering::Acquire);
-    if ptr.is_null() {
-        ptr = load_sciter_api()?;
-        API.store(ptr, Ordering::Release);
+            static API: AtomicPtr<ISciterAPI> = AtomicPtr::new(core::ptr::null_mut());
+
+            let mut ptr = API.load(Ordering::Acquire);
+            if ptr.is_null() {
+                ptr = load_sciter_api()?;
+                API.store(ptr, Ordering::Release);
+            }
+
+            Ok(Api::from(unsafe { &*ptr }))
+        }
+
+        fn load_sciter_api() -> Result<*mut ISciterAPI> {
+            unsafe {
+                let lib = if let Ok(bin) = std::env::var("SCITER_BIN_FOLDER") {
+                    let full = format!("{}/{SCITER_DLL_NAME}", bin);
+                    libloading::Library::new(&full)
+                } else {
+                    libloading::Library::new(SCITER_DLL_NAME)
+                };
+                let lib = lib.map_err(|err| Error::library(SCITER_DLL_NAME, err))?;
+                let func: libloading::Symbol<unsafe extern "system" fn() -> *mut ISciterAPI> = lib
+                    .get(b"SciterAPI")
+                    .map_err(|err| Error::symbol("SciterAPI", err))?;
+
+                let api = func();
+                std::mem::forget(lib); // leave loaded forever
+
+                Ok(api)
+            }
+        }
     }
+    else {
+        pub fn sapi() -> Result<Api<'static>> {
+            let api: &ISciterAPI = unsafe { &*SciterAPI() };
 
-    Ok(Api::from(unsafe { &*ptr }))
-}
+            Ok(Api::from(api))
+        }
 
-fn load_sciter_api() -> Result<*mut ISciterAPI> {
-    unsafe {
-        let lib = if let Ok(bin) = std::env::var("SCITER_BIN_FOLDER") {
-            let full = format!("{}/{SCITER_DLL_NAME}", bin);
-            libloading::Library::new(&full)
-        } else {
-            libloading::Library::new(SCITER_DLL_NAME)
-        };
-        let lib = lib.map_err(|err| Error::library(SCITER_DLL_NAME, err))?;
-        let func: libloading::Symbol<unsafe extern "system" fn() -> *mut ISciterAPI> = lib
-            .get(b"SciterAPI")
-            .map_err(|err| Error::symbol("SciterAPI", err))?;
-
-        let api = func();
-        std::mem::forget(lib); // leave loaded forever
-
-        Ok(api)
+        #[link(name = "sciter-static-release", kind="static")]
+        extern "C" {
+            pub fn SciterAPI() -> *const ISciterAPI;
+        }
     }
 }
 

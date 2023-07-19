@@ -22,7 +22,7 @@ fn try_main() -> Result<i32> {
 
                 if WM_KEYDOWN == _msg && _wp == VK_SPACE {
                     let _ = _w.notify_host(1, 2, 20);
-                }    
+                }
             }
 
             (false, Default::default())
