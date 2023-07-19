@@ -18,13 +18,13 @@
 		{
 			"type": "cargo",
 			"command": "build",
-			"args": ["--all-targets", "--release"],
+			"args": ["--examples", "--release"],
 			"problemMatcher": [
 				"$rustc",
 				"$rust-panic"
 			],
 			"group": "build",
-			"label": "rust: cargo build"
+			"label": "rust: cargo build examples"
 		},
 		{
 			"type": "cargo",

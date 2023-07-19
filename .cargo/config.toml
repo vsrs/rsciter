@@ -7,4 +7,22 @@ rustflags = [
     "-l", "Wininet",
     "-l", "gdi32",
     "-l", "Winspool",
-    ]
+
+    "-C", "link-args=/alternatename:open=_open",
+    "-C", "link-args=/alternatename:close=_close",
+    "-C", "link-args=/alternatename:umask=_umask",
+    "-C", "link-args=/alternatename:wcsrev=_wcsrev",
+    "-C", "link-args=/alternatename:wcsdup=_wcsdup",
+    "-C", "link-args=/alternatename:strdup=_strdup",    
+    "-C", "link-args=/alternatename:unlink=_unlink",
+    "-C", "link-args=/alternatename:fdopen=_fdopen",
+    "-C", "link-args=/alternatename:fileno=_fileno",
+    "-C", "link-args=/alternatename:isatty=_isatty",
+    "-C", "link-args=/alternatename:lseek=_lseek",
+    "-C", "link-args=/alternatename:read=_read",
+    "-C", "link-args=/alternatename:write=_write",
+    "-C", "link-args=/alternatename:rmdir=_rmdir",
+    "-C", "link-args=/alternatename:getcwd=_getcwd",
+    "-C", "link-args=/alternatename:chdir=_chdir",
+    "-C", "link-args=/alternatename:mkdir=_mkdir",
+]
