@@ -32,8 +32,7 @@ features = [
 # default = ["dynamic", "windowless"]
 
 [features]
-#default = ["dynamic"]
-default = []
+default = ["dynamic"]
 
 # Use Sciter shared library
 dynamic = []

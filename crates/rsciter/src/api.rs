@@ -29,7 +29,7 @@ cfg_if::cfg_if! {
             unsafe {
                 let lib = if let Ok(bin) = std::env::var("SCITER_BIN_FOLDER") {
                     let full = format!("{}/{SCITER_DLL_NAME}", bin);
-                    libloading::Library::new(&full)
+                    libloading::Library::new(full)
                 } else {
                     libloading::Library::new(SCITER_DLL_NAME)
                 };

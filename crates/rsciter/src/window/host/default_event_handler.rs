@@ -42,20 +42,20 @@ impl DefaultEventHandler {
     }
 }
 
-impl EventHandler<'_> for DefaultEventHandler {
-    fn attached(&mut self, he: crate::bindings::HELEMENT) {
+impl<'s> EventHandler<'s> for DefaultEventHandler {
+    fn attached(&'s mut self, he: crate::bindings::HELEMENT) {
         if let Some(handler) = self.custom_handler.as_mut() {
             handler.attached(he);
         }
     }
 
-    fn detached(&mut self, he: crate::bindings::HELEMENT) {
+    fn detached(&'s mut self, he: crate::bindings::HELEMENT) {
         if let Some(handler) = self.custom_handler.as_mut() {
             handler.detached(he);
         }
     }
 
-    fn subscription(&mut self, he: crate::bindings::HELEMENT) -> Option<crate::EventGroups> {
+    fn subscription(&'s mut self, he: crate::bindings::HELEMENT) -> Option<crate::EventGroups> {
         self.custom_handler
             .as_mut()
             .and_then(move |it| it.subscription(he))
@@ -63,7 +63,7 @@ impl EventHandler<'_> for DefaultEventHandler {
     }
 
     fn on_mouse(
-        &mut self,
+        &'s mut self,
         he: crate::bindings::HELEMENT,
         mouse: &crate::bindings::MOUSE_PARAMS,
     ) -> crate::Result<bool> {
@@ -74,7 +74,7 @@ impl EventHandler<'_> for DefaultEventHandler {
     }
 
     fn on_key(
-        &mut self,
+        &'s mut self,
         he: crate::bindings::HELEMENT,
         key: &crate::bindings::KEY_PARAMS,
     ) -> crate::Result<bool> {
@@ -85,7 +85,7 @@ impl EventHandler<'_> for DefaultEventHandler {
     }
 
     fn on_focus(
-        &mut self,
+        &'s mut self,
         he: crate::bindings::HELEMENT,
         params: &crate::bindings::FOCUS_PARAMS,
     ) -> crate::Result<bool> {
@@ -96,7 +96,7 @@ impl EventHandler<'_> for DefaultEventHandler {
     }
 
     fn on_draw(
-        &mut self,
+        &'s mut self,
         he: crate::bindings::HELEMENT,
         params: &crate::bindings::DRAW_PARAMS,
     ) -> crate::Result<bool> {
@@ -107,7 +107,7 @@ impl EventHandler<'_> for DefaultEventHandler {
     }
 
     fn on_timer(
-        &mut self,
+        &'s mut self,
         he: crate::bindings::HELEMENT,
         params: &crate::bindings::TIMER_PARAMS,
     ) -> crate::Result<bool> {
@@ -118,7 +118,7 @@ impl EventHandler<'_> for DefaultEventHandler {
     }
 
     fn on_event(
-        &mut self,
+        &'s mut self,
         he: crate::bindings::HELEMENT,
         params: &crate::bindings::BEHAVIOR_EVENT_PARAMS,
     ) -> crate::Result<bool> {
@@ -129,7 +129,7 @@ impl EventHandler<'_> for DefaultEventHandler {
     }
 
     fn on_method_call(
-        &mut self,
+        &'s mut self,
         he: crate::bindings::HELEMENT,
         params: &crate::bindings::METHOD_PARAMS,
     ) -> crate::Result<bool> {
@@ -140,7 +140,7 @@ impl EventHandler<'_> for DefaultEventHandler {
     }
 
     fn on_data(
-        &mut self,
+        &'s mut self,
         he: crate::bindings::HELEMENT,
         params: &crate::bindings::DATA_ARRIVED_PARAMS,
     ) -> crate::Result<bool> {
@@ -151,7 +151,7 @@ impl EventHandler<'_> for DefaultEventHandler {
     }
 
     fn on_scroll(
-        &mut self,
+        &'s mut self,
         he: crate::bindings::HELEMENT,
         params: &crate::bindings::SCROLL_PARAMS,
     ) -> crate::Result<bool> {
@@ -161,7 +161,7 @@ impl EventHandler<'_> for DefaultEventHandler {
             .unwrap_or(Ok(false))
     }
 
-    fn on_size(&mut self, he: crate::bindings::HELEMENT) -> crate::Result<bool> {
+    fn on_size(&'s mut self, he: crate::bindings::HELEMENT) -> crate::Result<bool> {
         self.custom_handler
             .as_mut()
             .map(move |it| it.on_size(he))
@@ -169,7 +169,7 @@ impl EventHandler<'_> for DefaultEventHandler {
     }
 
     fn on_scripting_method_call(
-        &mut self,
+        &'s mut self,
         he: crate::bindings::HELEMENT,
         name: &str,
         args: &[crate::Value],
@@ -185,7 +185,7 @@ impl EventHandler<'_> for DefaultEventHandler {
     }
 
     fn on_gesture(
-        &mut self,
+        &'s mut self,
         he: crate::bindings::HELEMENT,
         params: &crate::bindings::GESTURE_PARAMS,
     ) -> crate::Result<bool> {
@@ -196,7 +196,7 @@ impl EventHandler<'_> for DefaultEventHandler {
     }
 
     fn on_exchange(
-        &mut self,
+        &'s mut self,
         he: crate::bindings::HELEMENT,
         params: &crate::bindings::EXCHANGE_PARAMS,
     ) -> crate::Result<bool> {
@@ -207,7 +207,7 @@ impl EventHandler<'_> for DefaultEventHandler {
     }
 
     fn on_attribute_change(
-        &mut self,
+        &'s mut self,
         he: crate::bindings::HELEMENT,
         params: &crate::bindings::ATTRIBUTE_CHANGE_PARAMS,
     ) {
@@ -216,14 +216,19 @@ impl EventHandler<'_> for DefaultEventHandler {
         }
     }
 
-    fn on_som(
-        &mut self,
+    fn on_passport(
+        &'s mut self,
         he: crate::bindings::HELEMENT,
-        params: &crate::bindings::SOM_PARAMS,
-    ) -> Result<bool> {
-        self.custom_handler
-            .as_mut()
-            .map(move |it| it.on_som(he, params))
-            .unwrap_or(Ok(false))
+    ) -> Result<Option<&'s crate::bindings::som_passport_t>> {
+        let _ = he;
+        Ok(None)
+    }
+
+    fn on_asset(
+        &'s mut self,
+        he: crate::bindings::HELEMENT,
+    ) -> Result<Option<&'s crate::bindings::som_asset_t>> {
+        let _ = he;
+        Ok(None)
     }
 }

@@ -54,7 +54,7 @@ fn print_args(args: &[Value]) -> Result<Option<Value>> {
     Ok(None)
 }
 
-impl EventHandler for Handler {
+impl EventHandler<'_> for Handler {
     fn on_scripting_method_call(
         &mut self,
         he: bindings::HELEMENT,

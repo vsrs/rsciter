@@ -1345,12 +1345,15 @@ pub enum INITIALIZATION_EVENTS {
 pub struct INITIALIZATION_PARAMS {
     pub cmd: UINT,
 }
-#[repr(i32)]
-#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
-pub enum SOM_EVENTS {
-    SOM_GET_PASSPORT = 0,
-    SOM_GET_ASSET = 1,
+impl SOM_EVENTS {
+    pub const SOM_GET_PASSPORT: SOM_EVENTS = SOM_EVENTS(0);
 }
+impl SOM_EVENTS {
+    pub const SOM_GET_ASSET: SOM_EVENTS = SOM_EVENTS(1);
+}
+#[repr(transparent)]
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+pub struct SOM_EVENTS(pub ::std::os::raw::c_int);
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct SOM_PARAMS {

@@ -104,10 +104,14 @@ pub trait EventHandler<'s>: AsAny {
         let _ = params;
     }
 
-    fn on_som(&'s mut self, he: HELEMENT, params: &SOM_PARAMS) -> Result<bool> {
+    fn on_passport(&'s mut self, he: HELEMENT) -> Result<Option<&'s som_passport_t>> {
         let _ = he;
-        let _ = params;
-        Ok(false)
+        Ok(None)
+    }
+
+    fn on_asset(&'s mut self, he: HELEMENT) -> Result<Option<&'s som_asset_t>> {
+        let _ = he;
+        Ok(None)
     }
 }
 
@@ -249,12 +253,25 @@ pub(super) unsafe extern "C" fn element_proc_thunk(
                 }
 
                 EVENT_GROUPS::HANDLE_SOM => {
-                    let params = &*(params as *const SOM_PARAMS);
-                    if let Ok(res) = event_handler.on_som(he, params) {
-                        return res as _;
-                    };
+                    let mut params = &mut *(params as *mut SOM_PARAMS);
+                    let cmd = SOM_EVENTS(params.cmd as i32);
+                    match cmd {
+                        SOM_EVENTS::SOM_GET_PASSPORT => {
+                            if let Ok(Some(res)) = event_handler.on_passport(he) {
+                                params.data.passport = res as *const _ as *mut _;
+                                return true as _;
+                            }
+                        }
+                        SOM_EVENTS::SOM_GET_ASSET => {
+                            if let Ok(Some(res)) = event_handler.on_asset(he) {
+                                params.data.asset = res as *const _ as *mut _;
+                                return true as _;
+                            }
+                        }
+                        _ => (),
+                    }
                 }
-                
+
                 _ => (),
             }
         }
