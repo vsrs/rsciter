@@ -104,7 +104,7 @@ impl Window {
     }
 
     /// Get access to the [`EventHandler`] trait object if any.
-    pub fn with_event_handler<T: EventHandler>(&self, f: impl FnOnce(&T)) {
+    pub fn with_event_handler<'s, T: EventHandler<'s>>(&self, f: impl FnOnce(&T)) {
         if let Some(dyn_handler) = self.state.as_ref().event_handler.as_ref() {
             if let Some(handler) = dyn_handler.as_any().downcast_ref::<T>() {
                 f(handler);
@@ -112,7 +112,7 @@ impl Window {
         }
     }
 
-    pub fn with_event_handler_mut<T: EventHandler>(&mut self, f: impl FnOnce(&T)) {
+    pub fn with_event_handler_mut<'s, T: EventHandler<'s>>(&mut self, f: impl FnOnce(&T)) {
         if let Some(dyn_handler) = self.state.as_mut().event_handler.as_mut() {
             if let Some(handler) = dyn_handler.as_any_mut().downcast_mut::<T>() {
                 f(handler);
@@ -124,7 +124,7 @@ impl Window {
 pub(crate) struct WindowState {
     delegate: Option<Box<dyn WindowDelegate>>,
     host: Option<Box<dyn HostNotifications>>,
-    event_handler: Option<Box<dyn EventHandler>>,
+    event_handler: Option<Box<dyn for<'s> EventHandler<'s>>>,
 }
 
 impl WindowState {
@@ -136,7 +136,7 @@ impl WindowState {
         self.host.as_mut().map(|it| it.as_mut())
     }
 
-    pub(crate) fn event_handler(&mut self) -> Option<&mut dyn EventHandler> {
-        self.event_handler.as_mut().map(|it| it.as_mut())
+    pub(crate) fn event_handler(&mut self) -> Option<&mut (dyn for<'s> EventHandler<'s>)> {
+        self.event_handler.as_mut().map(move |it| it.as_mut())
     }
 }

@@ -2,80 +2,80 @@ use crate::{args_from_raw_parts, bindings::*, AsAny, Error, Result, Value, Windo
 
 pub type EventGroups = EVENT_GROUPS;
 
-pub trait EventHandler: AsAny {
-    fn attached(&mut self, he: HELEMENT) {
+pub trait EventHandler<'s>: AsAny {
+    fn attached(&'s mut self, he: HELEMENT) {
         let _ = he;
     }
-    fn detached(&mut self, he: HELEMENT) {
+    fn detached(&'s mut self, he: HELEMENT) {
         let _ = he;
     }
 
-    fn subscription(&mut self, he: HELEMENT) -> Option<EventGroups> {
+    fn subscription(&'s mut self, he: HELEMENT) -> Option<EventGroups> {
         let _ = he;
         Some(EventGroups::HANDLE_ALL)
     }
 
-    fn on_mouse(&mut self, he: HELEMENT, mouse: &MOUSE_PARAMS) -> Result<bool> {
+    fn on_mouse(&'s mut self, he: HELEMENT, mouse: &MOUSE_PARAMS) -> Result<bool> {
         let _ = he;
         let _ = mouse;
         Ok(false)
     }
 
-    fn on_key(&mut self, he: HELEMENT, key: &KEY_PARAMS) -> Result<bool> {
+    fn on_key(&'s mut self, he: HELEMENT, key: &KEY_PARAMS) -> Result<bool> {
         let _ = he;
         let _ = key;
         Ok(false)
     }
 
-    fn on_focus(&mut self, he: HELEMENT, params: &FOCUS_PARAMS) -> Result<bool> {
+    fn on_focus(&'s mut self, he: HELEMENT, params: &FOCUS_PARAMS) -> Result<bool> {
         let _ = he;
         let _ = params;
         Ok(false)
     }
 
-    fn on_draw(&mut self, he: HELEMENT, params: &DRAW_PARAMS) -> Result<bool> {
+    fn on_draw(&'s mut self, he: HELEMENT, params: &DRAW_PARAMS) -> Result<bool> {
         let _ = he;
         let _ = params;
         Ok(false)
     }
 
-    fn on_timer(&mut self, he: HELEMENT, params: &TIMER_PARAMS) -> Result<bool> {
+    fn on_timer(&'s mut self, he: HELEMENT, params: &TIMER_PARAMS) -> Result<bool> {
         let _ = he;
         let _ = params;
         Ok(false)
     }
 
-    fn on_event(&mut self, he: HELEMENT, params: &BEHAVIOR_EVENT_PARAMS) -> Result<bool> {
+    fn on_event(&'s mut self, he: HELEMENT, params: &BEHAVIOR_EVENT_PARAMS) -> Result<bool> {
         let _ = he;
         let _ = params;
         Ok(false)
     }
 
-    fn on_method_call(&mut self, he: HELEMENT, params: &METHOD_PARAMS) -> Result<bool> {
+    fn on_method_call(&'s mut self, he: HELEMENT, params: &METHOD_PARAMS) -> Result<bool> {
         let _ = he;
         let _ = params;
         Ok(false)
     }
 
-    fn on_data(&mut self, he: HELEMENT, params: &DATA_ARRIVED_PARAMS) -> Result<bool> {
+    fn on_data(&'s mut self, he: HELEMENT, params: &DATA_ARRIVED_PARAMS) -> Result<bool> {
         let _ = he;
         let _ = params;
         Ok(false)
     }
 
-    fn on_scroll(&mut self, he: HELEMENT, params: &SCROLL_PARAMS) -> Result<bool> {
+    fn on_scroll(&'s mut self, he: HELEMENT, params: &SCROLL_PARAMS) -> Result<bool> {
         let _ = he;
         let _ = params;
         Ok(false)
     }
 
-    fn on_size(&mut self, he: HELEMENT) -> Result<bool> {
+    fn on_size(&'s mut self, he: HELEMENT) -> Result<bool> {
         let _ = he;
         Ok(false)
     }
 
     fn on_scripting_method_call(
-        &mut self,
+        &'s mut self,
         he: HELEMENT,
         name: &str,
         args: &[Value],
@@ -87,21 +87,27 @@ pub trait EventHandler: AsAny {
         Err(Error::ScriptingNoMethod(name.to_string()))
     }
 
-    fn on_gesture(&mut self, he: HELEMENT, params: &GESTURE_PARAMS) -> Result<bool> {
+    fn on_gesture(&'s mut self, he: HELEMENT, params: &GESTURE_PARAMS) -> Result<bool> {
         let _ = he;
         let _ = params;
         Ok(false)
     }
 
-    fn on_exchange(&mut self, he: HELEMENT, params: &EXCHANGE_PARAMS) -> Result<bool> {
+    fn on_exchange(&'s mut self, he: HELEMENT, params: &EXCHANGE_PARAMS) -> Result<bool> {
         let _ = he;
         let _ = params;
         Ok(false)
     }
 
-    fn on_attribute_change(&mut self, he: HELEMENT, params: &ATTRIBUTE_CHANGE_PARAMS) {
+    fn on_attribute_change(&'s mut self, he: HELEMENT, params: &ATTRIBUTE_CHANGE_PARAMS) {
         let _ = he;
         let _ = params;
+    }
+
+    fn on_som(&'s mut self, he: HELEMENT, params: &SOM_PARAMS) -> Result<bool> {
+        let _ = he;
+        let _ = params;
+        Ok(false)
     }
 }
 
@@ -241,6 +247,14 @@ pub(super) unsafe extern "C" fn element_proc_thunk(
                         return true as _;
                     }
                 }
+
+                EVENT_GROUPS::HANDLE_SOM => {
+                    let params = &*(params as *const SOM_PARAMS);
+                    if let Ok(res) = event_handler.on_som(he, params) {
+                        return res as _;
+                    };
+                }
+                
                 _ => (),
             }
         }

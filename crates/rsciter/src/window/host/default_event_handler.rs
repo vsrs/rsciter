@@ -5,7 +5,7 @@ use crate::{EventHandler, Result, Value, XFunction, XFunctionProvider};
 pub struct DefaultEventHandler {
     functions: HashMap<String, Box<dyn XFunction>>,
     modules: Vec<Box<dyn XFunctionProvider>>,
-    custom_handler: Option<Box<dyn EventHandler>>,
+    custom_handler: Option<Box<dyn for<'s> EventHandler<'s>>>,
 }
 
 impl DefaultEventHandler {
@@ -37,12 +37,12 @@ impl DefaultEventHandler {
         Err(crate::Error::ScriptingNoMethod(name.to_string()))
     }
 
-    pub fn set_custom_event_handler(&mut self, handler: Box<dyn EventHandler>) {
+    pub fn set_custom_event_handler(&mut self, handler: Box<dyn for<'s> EventHandler<'s>>) {
         self.custom_handler = Some(handler);
     }
 }
 
-impl EventHandler for DefaultEventHandler {
+impl EventHandler<'_> for DefaultEventHandler {
     fn attached(&mut self, he: crate::bindings::HELEMENT) {
         if let Some(handler) = self.custom_handler.as_mut() {
             handler.attached(he);
@@ -214,5 +214,16 @@ impl EventHandler for DefaultEventHandler {
         if let Some(custom) = self.custom_handler.as_mut() {
             custom.on_attribute_change(he, params);
         }
+    }
+
+    fn on_som(
+        &mut self,
+        he: crate::bindings::HELEMENT,
+        params: &crate::bindings::SOM_PARAMS,
+    ) -> Result<bool> {
+        self.custom_handler
+            .as_mut()
+            .map(move |it| it.on_som(he, params))
+            .unwrap_or(Ok(false))
     }
 }

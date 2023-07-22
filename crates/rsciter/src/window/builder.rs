@@ -71,7 +71,7 @@ impl<'b, const ANY_HOST: u8, const ANY_INITIAL_PAGE: u8>
         self
     }
 
-    pub fn with_event_handler(mut self, handler: impl EventHandler) -> Self {
+    pub fn with_event_handler(mut self, handler: impl for<'s> EventHandler<'s>) -> Self {
         self.common.event_handler = Some(Box::new(handler));
         self
     }
@@ -100,12 +100,12 @@ impl<'b, const ANY_HOST: u8, const ANY_INITIAL_PAGE: u8>
             (None, None) => None,
             (None, Some(user)) => Some(user),
             (Some(default), None) => {
-                let handler: Box<dyn EventHandler> = Box::new(default);
+                let handler: Box<dyn for<'s> EventHandler<'s>> = Box::new(default);
                 Some(handler)
             }
             (Some(mut default), Some(user)) => {
                 default.set_custom_event_handler(user);
-                let handler: Box<dyn EventHandler> = Box::new(default);
+                let handler: Box<dyn for<'s> EventHandler<'s>> = Box::new(default);
                 Some(handler)
             }
         };
@@ -319,7 +319,7 @@ struct Common {
     frame: Option<RECT>,
     parent: Option<HWND>,
     window_delegate: Option<Box<dyn WindowDelegate>>,
-    event_handler: Option<Box<dyn EventHandler>>,
+    event_handler: Option<Box<dyn for<'s> EventHandler<'s>>>,
 }
 
 enum InitialPage<'b> {
