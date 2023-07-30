@@ -1940,21 +1940,33 @@ impl SCITER_CREATE_WINDOW_FLAGS {
 #[repr(transparent)]
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub struct SCITER_CREATE_WINDOW_FLAGS(pub ::std::os::raw::c_int);
-#[repr(i32)]
-#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
-pub enum OUTPUT_SUBSYTEMS {
-    OT_DOM = 0,
-    OT_CSSS = 1,
-    OT_CSS = 2,
-    OT_TIS = 3,
+impl OUTPUT_SUBSYTEMS {
+    pub const OT_DOM: OUTPUT_SUBSYTEMS = OUTPUT_SUBSYTEMS(0);
 }
-#[repr(i32)]
-#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
-pub enum OUTPUT_SEVERITY {
-    OS_INFO = 0,
-    OS_WARNING = 1,
-    OS_ERROR = 2,
+impl OUTPUT_SUBSYTEMS {
+    pub const OT_CSSS: OUTPUT_SUBSYTEMS = OUTPUT_SUBSYTEMS(1);
 }
+impl OUTPUT_SUBSYTEMS {
+    pub const OT_CSS: OUTPUT_SUBSYTEMS = OUTPUT_SUBSYTEMS(2);
+}
+impl OUTPUT_SUBSYTEMS {
+    pub const OT_TIS: OUTPUT_SUBSYTEMS = OUTPUT_SUBSYTEMS(3);
+}
+#[repr(transparent)]
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+pub struct OUTPUT_SUBSYTEMS(pub ::std::os::raw::c_int);
+impl OUTPUT_SEVERITY {
+    pub const OS_INFO: OUTPUT_SEVERITY = OUTPUT_SEVERITY(0);
+}
+impl OUTPUT_SEVERITY {
+    pub const OS_WARNING: OUTPUT_SEVERITY = OUTPUT_SEVERITY(1);
+}
+impl OUTPUT_SEVERITY {
+    pub const OS_ERROR: OUTPUT_SEVERITY = OUTPUT_SEVERITY(2);
+}
+#[repr(transparent)]
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+pub struct OUTPUT_SEVERITY(pub ::std::os::raw::c_int);
 pub type DEBUG_OUTPUT_PROC = ::std::option::Option<
     unsafe extern "C" fn(
         param: LPVOID,
@@ -2770,3 +2782,4 @@ pub struct _ISciterAPI {
 }
 pub type ISciterAPI = _ISciterAPI;
 pub type SciterAPI_ptr = ::std::option::Option<unsafe extern "C" fn() -> *mut ISciterAPI>;
+

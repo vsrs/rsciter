@@ -1,5 +1,5 @@
 $code = (bindgen --default-enum-style rust `
-        --newtype-enum "SCRIPT_RUNTIME_FEATURES|VALUE_.*|.*_FLAGS|.*_flags" `
+        --newtype-enum "SCRIPT_RUNTIME_FEATURES|SOM_EVENTS|OUTPUT_.*|VALUE_.*|.*_FLAGS|.*_flags" `
         --bitfield-enum "EVENT_GROUPS" `
         --allowlist-file=".*sciter.*\.h" `
         --allowlist-file=".*value\.h" `
