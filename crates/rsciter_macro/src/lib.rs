@@ -55,6 +55,7 @@ fn xmod_impl(attr: TokenStream2, input: TokenStream2) -> syn::Result<TokenStream
                     }
                 }
 
+                #[allow(non_snake_case)]
                 impl #provider_struct_name {
                     #( #implementations )*
                 }

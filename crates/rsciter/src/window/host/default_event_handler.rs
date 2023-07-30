@@ -20,6 +20,11 @@ impl DefaultEventHandler {
         }
     }
 
+    pub fn with_module(provider: impl XFunctionProvider) -> Self {
+        let boxed: Box<dyn XFunctionProvider> = Box::new(provider);
+        Self::new(Default::default(), vec![boxed])
+    }
+
     pub fn xcall(&mut self, name: &str, args: &[Value]) -> Result<Option<Value>> {
         // free functions take precedence
         if let Some(func) = self.functions.get_mut(name) {

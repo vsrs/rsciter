@@ -80,6 +80,23 @@ impl Value {
         Ok(this)
     }
 
+    pub fn map_from<'a, K, V>(data: impl IntoIterator<Item = (&'a K, &'a V)>) -> Result<Self>
+    where
+        K: conv::ToValue + Copy + 'a,
+        V: conv::ToValue + Copy + 'a,
+    {
+        let mut this = Self::new();
+        let api = sapi()?;
+        api.value_int_data_set(&mut this.0, 0, VALUE_TYPE::T_MAP, None)?;
+        for (key, item) in data {
+            let k = K::to_value(*key).unwrap();
+            let v = V::to_value(*item).unwrap();
+
+            api.value_set_value_to_key(&mut this.0, &k.0, &v.0)?;
+        }
+        Ok(this)
+    }
+
     pub fn empty_map() -> Result<Self> {
         Self::map(&[])
     }
