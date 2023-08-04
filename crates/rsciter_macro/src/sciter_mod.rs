@@ -12,8 +12,8 @@ pub struct SciterMod<'m> {
 }
 
 impl<'m> SciterMod<'m> {
-    pub fn new(module: &'m syn::ItemMod, name: String) -> syn::Result<Self> {
-        let methods = Self::get_methods(module)?;
+    pub fn from_mod(module: &'m syn::ItemMod, name: String) -> syn::Result<Self> {
+        let methods = Self::get_mod_methods(module)?;
         Ok(Self {
             module,
             name: Ident::new(&name, Span::call_site()),
@@ -54,29 +54,13 @@ impl<'m> SciterMod<'m> {
         (names, calls, impls)
     }
 
-    fn get_methods(module: &'m syn::ItemMod) -> syn::Result<Vec<MethodInfo<'m>>> {
+    fn get_mod_methods(module: &'m syn::ItemMod) -> syn::Result<Vec<MethodInfo<'m>>> {
         let mut res = Vec::<MethodInfo>::new();
         if let Some((_, items)) = module.content.as_ref() {
             for item in items {
                 match item {
                     syn::Item::Fn(fn_item) if matches!(fn_item.vis, Visibility::Public(_)) => {
-                        let call_ident = format_ident!("call_{}", &fn_item.sig.ident);
-
-                        if fn_item.sig.generics.lt_token.is_some() {
-                            return Err(syn::Error::new(
-                                fn_item.sig.generics.span(),
-                                "#[rsciter::xmod] Generic functions are not supported!",
-                            ));
-                        }
-
-                        if fn_item.sig.variadic.is_some() {
-                            return Err(syn::Error::new(
-                                fn_item.sig.generics.span(),
-                                "#[rsciter::xmod] Variadic functions are not supported!",
-                            ));
-                        }
-
-                        let info = MethodInfo::new(fn_item, call_ident)?;
+                        let info = MethodInfo::new(&fn_item.sig)?;
                         res.push(info);
                     }
                     _ => (),

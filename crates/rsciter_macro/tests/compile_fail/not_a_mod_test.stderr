@@ -1,4 +1,4 @@
-error: expected `mod`: the #[rsciter::xmod] attribute can only be applied to an inline module!
+error: the #[rsciter::xmod] attribute can only be applied to an inline module or impl block!
  --> tests/compile_fail/not_a_mod_test.rs:2:1
   |
 2 | struct S;

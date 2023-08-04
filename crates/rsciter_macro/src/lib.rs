@@ -20,46 +20,58 @@ pub fn xmod(attr: TokenStream, input: TokenStream) -> TokenStream {
 }
 
 fn xmod_impl(attr: TokenStream2, input: TokenStream2) -> syn::Result<TokenStream2> {
-    const MESSAGE: &str = "the #[rsciter::xmod] attribute can only be applied to an inline module!";
+    const MESSAGE: &str = "the #[rsciter::xmod] attribute can only be applied to an inline module or impl block!";
 
-    match syn::parse2::<syn::ItemMod>(input) {
-        Ok(m) if m.content.is_none() => Err(syn::Error::new(m.span(), MESSAGE)),
-        Err(e) => Err(syn::Error::new(e.span(), format!("{e}: {MESSAGE}"))),
-        Ok(mut module) => {
-            let mut struct_name = attr.to_string();
-            if struct_name.is_empty() {
-                struct_name = module.ident.to_string();
-                // struct and module names are in the same namespace,
-                // have to rename the module to use its name
-                module.ident = Ident::new(&format!("{}_mod", &module.ident), module.ident.span());
-            }
-
-            let info = sciter_mod::SciterMod::new(&module, struct_name)?;
-            let provider_struct_name = info.ident();
-            let vis = info.visibility();
-            let (names, calls, implementations) = info.methods();
-
-            Ok(quote!(
-                #[allow(non_snake_case)]
-                #[allow(dead_code)]
-                #module // TODO: remove attrs like #[transparent]
-
-                #vis struct #provider_struct_name;
-
-                impl ::rsciter::XFunctionProvider for #provider_struct_name {
-                    fn call(&mut self, name: &str, args: &[::rsciter::Value]) -> ::rsciter::Result<Option<::rsciter::Value>> {
-                        match name {
-                            #( #names => #calls, )*
-                            _ => Err(::rsciter::Error::ScriptingNoMethod(name.to_string())),
-                        }
-                    }
-                }
-
-                #[allow(non_snake_case)]
-                impl #provider_struct_name {
-                    #( #implementations )*
-                }
-            ))
-        }
+    match syn::parse2::<syn::ItemMod>(input.clone()) {
+        Ok(m) if m.content.is_none() => return Err(syn::Error::new(m.span(), MESSAGE)),
+        Ok(module) => return parse_module(attr, module),
+        _ => ()
     }
+
+    match syn::parse2::<syn::ItemImpl>(input) {
+        Err(e) => Err(syn::Error::new(e.span(), format!("{MESSAGE}"))),
+        Ok(impl_block) => parse_impl_block(attr, impl_block)
+    }
+}
+
+fn parse_module(attr: TokenStream2, mut module: syn::ItemMod) -> Result<TokenStream2, syn::Error> {
+    let mut struct_name = attr.to_string();
+    if struct_name.is_empty() {
+        struct_name = module.ident.to_string();
+        // struct and module names are in the same namespace,
+        // have to rename the module to use its name
+        module.ident = Ident::new(&format!("{}_mod", &module.ident), module.ident.span());
+    }
+    let info = sciter_mod::SciterMod::from_mod(&module, struct_name)?;
+    let provider_struct_name = info.ident();
+    let vis = info.visibility();
+    let (names, calls, implementations) = info.methods();
+    Ok(quote!(
+        #[allow(non_snake_case)]
+        #[allow(dead_code)]
+        #module // TODO: remove attrs like #[transparent]
+
+        #vis struct #provider_struct_name;
+
+        impl ::rsciter::XFunctionProvider for #provider_struct_name {
+            fn call(&mut self, name: &str, args: &[::rsciter::Value]) -> ::rsciter::Result<Option<::rsciter::Value>> {
+                match name {
+                    #( #names => #calls, )*
+                    _ => Err(::rsciter::Error::ScriptingNoMethod(name.to_string())),
+                }
+            }
+        }
+
+        #[allow(non_snake_case)]
+        impl #provider_struct_name {
+            #( #implementations )*
+        }
+    ))
+}
+
+fn parse_impl_block(_attr: TokenStream2, block: syn::ItemImpl) -> Result<TokenStream2, syn::Error>
+{    
+    Ok(quote!{
+        #block
+    })
 }

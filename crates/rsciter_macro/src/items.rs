@@ -1,26 +1,43 @@
 use crate::TokenStream2;
 use quote::quote;
-use syn::{self, spanned::Spanned, FnArg, Ident, ItemFn, PatIdent, ReturnType, Type, TypePath};
+use syn::{
+    self, spanned::Spanned, FnArg, Ident, ItemFn, PatIdent, ReturnType, Signature, Type, TypePath,
+};
 
 #[allow(dead_code)]
 pub struct MethodInfo<'m> {
-    method: &'m ItemFn,
+    sig: &'m Signature,
     call_ident: Ident,
     args: Vec<ArgInfo<'m>>,
 }
 
 impl<'m> MethodInfo<'m> {
-    pub fn new(method: &'m syn::ItemFn, call_ident: Ident) -> syn::Result<Self> {
-        let args = Self::get_args(method)?;
+    pub fn new(signature: &'m syn::Signature) -> syn::Result<Self> {
+        let call_ident = quote::format_ident!("call_{}", &signature.ident);
+
+        if signature.generics.lt_token.is_some() {
+            return Err(syn::Error::new(
+                signature.generics.span(),
+                "#[rsciter::xmod] Generic functions are not supported!",
+            ));
+        }
+        if signature.variadic.is_some() {
+            return Err(syn::Error::new(
+                signature.generics.span(),
+                "#[rsciter::xmod] Variadic functions are not supported!",
+            ));
+        }
+
+        let args = Self::get_args(signature)?;
         Ok(Self {
-            method,
+            sig: signature,
             call_ident,
             args,
         })
     }
 
     pub fn name(&self) -> String {
-        self.method.sig.ident.to_string()
+        self.sig.ident.to_string()
     }
 
     pub fn call_ident(&self) -> &Ident {
@@ -61,8 +78,8 @@ impl<'m> MethodInfo<'m> {
             )
         };
 
-        let method = &self.method.sig.ident;
-        if matches!(self.method.sig.output, ReturnType::Default) {
+        let method = &self.sig.ident;
+        if matches!(self.sig.output, ReturnType::Default) {
             quote! {
                 #prelude
                 #prefix #method ( #args );
@@ -77,9 +94,9 @@ impl<'m> MethodInfo<'m> {
         }
     }
 
-    fn get_args(method: &ItemFn) -> syn::Result<Vec<ArgInfo>> {
+    fn get_args(sig: &Signature) -> syn::Result<Vec<ArgInfo>> {
         let mut res = Vec::new();
-        for arg in method.sig.inputs.iter() {
+        for arg in sig.inputs.iter() {
             match arg {
                 FnArg::Receiver(s) => {
                     return Err(syn::Error::new(
