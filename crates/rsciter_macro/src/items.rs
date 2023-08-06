@@ -55,7 +55,7 @@ impl<'m> MethodInfo<'m> {
         if matches!(self.args.first(), Some(Arg::Reciever(_))) {
             arg_count -= 1;
         }
-        
+
         let (prelude, args) = if arg_count == 0 {
             (quote! { let _ = args; }, quote! {})
         } else {
