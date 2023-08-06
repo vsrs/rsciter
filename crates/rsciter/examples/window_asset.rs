@@ -28,15 +28,18 @@ fn try_main() -> Result<i32> {
 struct AssetHandler;
 
 impl<'a> EventHandler<'a> for AssetHandler {
-    fn on_passport(&'a mut self, he: bindings::HELEMENT) -> Result<Option<&'a bindings::som_passport_t>> {
+    fn on_passport(
+        &'a mut self,
+        he: bindings::HELEMENT,
+    ) -> Result<Option<&'a bindings::som_passport_t>> {
         let _ = he;
 
-        todo!()        
+        todo!()
     }
 
     fn on_asset(&'a mut self, he: bindings::HELEMENT) -> Result<Option<&'a bindings::som_asset_t>> {
         let _ = he;
 
-        todo!()        
+        todo!()
     }
 }

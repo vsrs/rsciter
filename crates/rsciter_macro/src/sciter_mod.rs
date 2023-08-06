@@ -1,6 +1,6 @@
 use proc_macro2::{Ident, Span};
-use quote::{format_ident, quote};
-use syn::{Visibility, spanned::Spanned, TypePath, Path};
+use quote::quote;
+use syn::{spanned::Spanned, Path, TypePath, Visibility};
 
 use super::items::MethodInfo;
 use crate::TokenStream2;
@@ -24,7 +24,7 @@ impl<'m> SciterMod<'m> {
         Ok(Self {
             vis: Some(&module.vis),
             prefix,
-            name: TypePath{ qself: None, path},
+            name: TypePath { qself: None, path },
             methods,
         })
     }
@@ -33,7 +33,7 @@ impl<'m> SciterMod<'m> {
         let methods = Self::get_impl_methods(impl_block)?;
         Ok(Self {
             vis: None,
-            prefix: quote!{},
+            prefix: quote! { self. },
             name: Self::get_impl_struct_name(impl_block)?,
             methods,
         })
@@ -56,13 +56,13 @@ impl<'m> SciterMod<'m> {
             let call = method.call_ident();
             let body = method.body(&self.prefix);
             let call_impl = quote! {
-                fn #call(args: &[::rsciter::Value]) -> ::rsciter::Result<Option<::rsciter::Value>> {
+                fn #call(&mut self, args: &[::rsciter::Value]) -> ::rsciter::Result<Option<::rsciter::Value>> {
                     #body
                 }
             };
 
             names.push(method.name());
-            calls.push(quote! { Self::#call(args) });
+            calls.push(quote! { self.#call(args) });
             impls.push(call_impl);
         }
 
@@ -87,9 +87,18 @@ impl<'m> SciterMod<'m> {
     }
 
     fn get_impl_methods(impl_block: &'m syn::ItemImpl) -> syn::Result<Vec<MethodInfo<'m>>> {
-        let mut res = Vec::<MethodInfo>::new();
+        let mut methods = Vec::new();
+        for it in &impl_block.items {
+            match it {
+                syn::ImplItem::Method(m) if matches!(m.vis, Visibility::Public(_)) => {
+                    let info = MethodInfo::new(&m.sig)?;
+                    methods.push(info);
+                }
+                _ => (),
+            }
+        }
 
-        Ok(res)
+        Ok(methods)
     }
 
     fn get_impl_struct_name(impl_block: &syn::ItemImpl) -> syn::Result<TypePath> {

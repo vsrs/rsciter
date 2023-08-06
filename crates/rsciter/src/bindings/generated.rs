@@ -2782,4 +2782,3 @@ pub struct _ISciterAPI {
 }
 pub type ISciterAPI = _ISciterAPI;
 pub type SciterAPI_ptr = ::std::option::Option<unsafe extern "C" fn() -> *mut ISciterAPI>;
-

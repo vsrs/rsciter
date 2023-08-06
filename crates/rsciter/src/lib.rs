@@ -3,21 +3,21 @@ pub mod bindings;
 pub mod api;
 pub mod app;
 mod archive;
+mod debug;
 mod error;
 mod event_handler;
 mod options;
 pub mod utf;
 mod value;
 mod window;
-mod debug;
 
 pub use archive::*;
+pub use debug::*;
 pub use error::*;
 pub use event_handler::*;
 pub use options::*;
 pub use value::*;
 pub use window::*;
-pub use debug::*;
 
 pub type Result<T> = std::result::Result<T, Error>;
 

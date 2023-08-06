@@ -24,9 +24,7 @@ fn try_main() -> Result<i32> {
         eprintln!("Sub: {:?}, Level: {:?}, {text}", sub, sev);
     })?;
 
-    let window = Window::builder()
-        .with_html(HTML)
-        .build_main()?;
+    let window = Window::builder().with_html(HTML).build_main()?;
 
     window.show(Visibility::Normal)?;
 

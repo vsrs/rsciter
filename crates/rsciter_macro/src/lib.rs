@@ -25,17 +25,20 @@ fn xmod_impl(attr: TokenStream2, input: TokenStream2) -> syn::Result<TokenStream
 
     match syn::parse2::<syn::ItemMod>(input.clone()) {
         Ok(m) if m.content.is_none() => return Err(syn::Error::new(m.span(), MESSAGE)),
-        Ok(module) => return parse_module(attr, module),
+        Ok(module) => return process_module(attr, module),
         _ => (),
     }
 
     match syn::parse2::<syn::ItemImpl>(input) {
-        Err(e) => Err(syn::Error::new(e.span(), format!("{MESSAGE}"))),
-        Ok(impl_block) => parse_impl_block(attr, impl_block),
+        Err(e) => Err(syn::Error::new(e.span(), MESSAGE.to_string())),
+        Ok(impl_block) => process_impl_block(attr, impl_block),
     }
 }
 
-fn parse_module(attr: TokenStream2, mut module: syn::ItemMod) -> Result<TokenStream2, syn::Error> {
+fn process_module(
+    attr: TokenStream2,
+    mut module: syn::ItemMod,
+) -> Result<TokenStream2, syn::Error> {
     let mut struct_name = attr.to_string();
     if struct_name.is_empty() {
         struct_name = module.ident.to_string();
@@ -59,10 +62,19 @@ fn parse_module(attr: TokenStream2, mut module: syn::ItemMod) -> Result<TokenStr
     ))
 }
 
-fn parse_impl_block(_attr: TokenStream2, block: syn::ItemImpl) -> Result<TokenStream2, syn::Error> {
+fn process_impl_block(
+    _attr: TokenStream2,
+    block: syn::ItemImpl,
+) -> Result<TokenStream2, syn::Error> {
     let info = sciter_mod::SciterMod::from_impl_block(&block)?;
+    let code = generate_xfunction_provider(&info);
+
     Ok(quote! {
+        #[allow(non_snake_case)]
+        #[allow(dead_code)]
         #block
+
+        #code
     })
 }
 
@@ -85,4 +97,26 @@ fn generate_xfunction_provider(info: &sciter_mod::SciterMod) -> TokenStream2 {
             #( #implementations )*
         }
     }
+}
+
+#[test]
+fn test() {
+    use std::str::FromStr;
+
+    let code = TokenStream2::from_str(
+        r#"
+    impl S {
+        pub fn second(&self, x: u64, x_ref: &u64) {
+            let _ = x;
+            let _ = x_ref;
+        }
+    }    
+    "#,
+    )
+    .unwrap();
+
+    let s = xmod_impl(TokenStream2::new(), code).unwrap();
+    let result = s.to_string();
+
+    eprintln!("{result}");
 }

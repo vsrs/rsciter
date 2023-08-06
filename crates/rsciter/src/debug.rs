@@ -20,7 +20,7 @@ impl From<OUTPUT_SUBSYTEMS> for DebugSubsystem {
             OUTPUT_SUBSYTEMS::OT_CSS => Self::Css,
             OUTPUT_SUBSYTEMS::OT_CSSS => Self::Csss,
             OUTPUT_SUBSYTEMS::OT_TIS => Self::Script,
-            v => Self::Unknown(v.0)
+            v => Self::Unknown(v.0),
         }
     }
 }
@@ -30,7 +30,7 @@ pub enum DebugSeverity {
     Info,
     Warning,
     Error,
-    Unknown(i32)
+    Unknown(i32),
 }
 
 impl From<OUTPUT_SEVERITY> for DebugSeverity {
@@ -39,7 +39,7 @@ impl From<OUTPUT_SEVERITY> for DebugSeverity {
             OUTPUT_SEVERITY::OS_INFO => Self::Info,
             OUTPUT_SEVERITY::OS_WARNING => Self::Warning,
             OUTPUT_SEVERITY::OS_ERROR => Self::Error,
-            x => Self::Unknown(x.0)
+            x => Self::Unknown(x.0),
         }
     }
 }
@@ -94,5 +94,7 @@ unsafe extern "C" fn debug_thunk(
     let data = std::slice::from_raw_parts(text, text_length as usize);
     let subsystem = OUTPUT_SUBSYTEMS(subsystem as i32).into();
     let severity = OUTPUT_SEVERITY(severity as i32).into();
-    inner.0.output(subsystem, severity, String::from_utf16_lossy(data));
+    inner
+        .0
+        .output(subsystem, severity, String::from_utf16_lossy(data));
 }

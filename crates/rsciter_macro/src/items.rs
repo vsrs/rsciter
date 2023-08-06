@@ -1,14 +1,19 @@
 use crate::TokenStream2;
 use quote::quote;
 use syn::{
-    self, spanned::Spanned, FnArg, Ident, ItemFn, PatIdent, ReturnType, Signature, Type, TypePath,
+    self, spanned::Spanned, FnArg, Ident, PatIdent, Receiver, ReturnType, Signature, Type, TypePath,
 };
 
 #[allow(dead_code)]
 pub struct MethodInfo<'m> {
     sig: &'m Signature,
     call_ident: Ident,
-    args: Vec<ArgInfo<'m>>,
+    args: Vec<Arg<'m>>,
+}
+
+enum Arg<'m> {
+    Reciever(&'m Receiver),
+    Arg(ArgInfo<'m>),
 }
 
 impl<'m> MethodInfo<'m> {
@@ -46,7 +51,6 @@ impl<'m> MethodInfo<'m> {
 
     #[allow(unreachable_code)]
     pub fn body(&self, prefix: &TokenStream2) -> TokenStream2 {
-        let _ = prefix;
         let arg_count = self.args.len();
         let (prelude, args) = if arg_count == 0 {
             (quote! { let _ = args; }, quote! {})
@@ -56,7 +60,15 @@ impl<'m> MethodInfo<'m> {
             let mut arg_names = Vec::new();
             let mut convertions = Vec::new();
             let mut calls = Vec::new();
-            for (idx, arg) in self.args.iter().enumerate() {
+            for (idx, arg) in self
+                .args
+                .iter()
+                .filter_map(|it| match it {
+                    Arg::Arg(a) => Some(a),
+                    _ => None,
+                })
+                .enumerate()
+            {
                 arg_names.push(arg.ident());
                 convertions.push(arg.convertion(idx));
                 calls.push(arg.call());
@@ -94,15 +106,12 @@ impl<'m> MethodInfo<'m> {
         }
     }
 
-    fn get_args(sig: &Signature) -> syn::Result<Vec<ArgInfo>> {
+    fn get_args(sig: &Signature) -> syn::Result<Vec<Arg>> {
         let mut res = Vec::new();
         for arg in sig.inputs.iter() {
             match arg {
                 FnArg::Receiver(s) => {
-                    return Err(syn::Error::new(
-                        s.span(),
-                        "#[rsciter::xmod] self parameter is not supported",
-                    ));
+                    res.push(Arg::Reciever(s));
                 }
                 FnArg::Typed(typed) => {
                     match typed.ty.as_ref() {
@@ -130,7 +139,7 @@ impl<'m> MethodInfo<'m> {
                         ident,
                         pat_type: &typed.ty,
                     };
-                    res.push(arg_info)
+                    res.push(Arg::Arg(arg_info))
                 }
             }
         }
