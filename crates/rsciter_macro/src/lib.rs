@@ -20,17 +20,18 @@ pub fn xmod(attr: TokenStream, input: TokenStream) -> TokenStream {
 }
 
 fn xmod_impl(attr: TokenStream2, input: TokenStream2) -> syn::Result<TokenStream2> {
-    const MESSAGE: &str = "the #[rsciter::xmod] attribute can only be applied to an inline module or impl block!";
+    const MESSAGE: &str =
+        "the #[rsciter::xmod] attribute can only be applied to an inline module or impl block!";
 
     match syn::parse2::<syn::ItemMod>(input.clone()) {
         Ok(m) if m.content.is_none() => return Err(syn::Error::new(m.span(), MESSAGE)),
         Ok(module) => return parse_module(attr, module),
-        _ => ()
+        _ => (),
     }
 
     match syn::parse2::<syn::ItemImpl>(input) {
         Err(e) => Err(syn::Error::new(e.span(), format!("{MESSAGE}"))),
-        Ok(impl_block) => parse_impl_block(attr, impl_block)
+        Ok(impl_block) => parse_impl_block(attr, impl_block),
     }
 }
 
@@ -42,10 +43,11 @@ fn parse_module(attr: TokenStream2, mut module: syn::ItemMod) -> Result<TokenStr
         // have to rename the module to use its name
         module.ident = Ident::new(&format!("{}_mod", &module.ident), module.ident.span());
     }
+
     let info = sciter_mod::SciterMod::from_mod(&module, struct_name)?;
-    let provider_struct_name = info.ident();
     let vis = info.visibility();
-    let (names, calls, implementations) = info.methods();
+    let provider_struct_name = info.name_path();
+    let code = generate_xfunction_provider(&info);
     Ok(quote!(
         #[allow(non_snake_case)]
         #[allow(dead_code)]
@@ -53,6 +55,22 @@ fn parse_module(attr: TokenStream2, mut module: syn::ItemMod) -> Result<TokenStr
 
         #vis struct #provider_struct_name;
 
+        #code
+    ))
+}
+
+fn parse_impl_block(_attr: TokenStream2, block: syn::ItemImpl) -> Result<TokenStream2, syn::Error> {
+    let info = sciter_mod::SciterMod::from_impl_block(&block)?;
+    Ok(quote! {
+        #block
+    })
+}
+
+fn generate_xfunction_provider(info: &sciter_mod::SciterMod) -> TokenStream2 {
+    let provider_struct_name = info.name_path();
+    let (names, calls, implementations) = info.methods();
+
+    quote! {
         impl ::rsciter::XFunctionProvider for #provider_struct_name {
             fn call(&mut self, name: &str, args: &[::rsciter::Value]) -> ::rsciter::Result<Option<::rsciter::Value>> {
                 match name {
@@ -66,12 +84,5 @@ fn parse_module(attr: TokenStream2, mut module: syn::ItemMod) -> Result<TokenStr
         impl #provider_struct_name {
             #( #implementations )*
         }
-    ))
-}
-
-fn parse_impl_block(_attr: TokenStream2, block: syn::ItemImpl) -> Result<TokenStream2, syn::Error>
-{    
-    Ok(quote!{
-        #block
-    })
+    }
 }

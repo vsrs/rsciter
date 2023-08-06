@@ -1,0 +1,5 @@
+error: #[rsciter::xmod] Generic impl blocks are not supported!
+ --> tests/compile_fail/generic_impl_test.rs:3:5
+  |
+3 | impl<T> S {
+  |     ^

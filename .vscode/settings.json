@@ -13,5 +13,6 @@
                     "SCITER_BIN_FOLDER": "/home/vit/Projects/sciter/sciter-js-sdk/bin/linux/x64",
                 }
             }
-        ]
+        ],
+        "cmake.configureOnOpen": false
 }

@@ -1,32 +1,50 @@
 use proc_macro2::{Ident, Span};
 use quote::{format_ident, quote};
-use syn::{spanned::Spanned, Visibility};
+use syn::{Visibility, spanned::Spanned, TypePath, Path};
 
 use super::items::MethodInfo;
 use crate::TokenStream2;
 
 pub struct SciterMod<'m> {
-    module: &'m syn::ItemMod,
-    name: Ident,
+    vis: Option<&'m syn::Visibility>,
+    prefix: TokenStream2,
+    name: TypePath,
     methods: Vec<MethodInfo<'m>>,
 }
 
 impl<'m> SciterMod<'m> {
     pub fn from_mod(module: &'m syn::ItemMod, name: String) -> syn::Result<Self> {
         let methods = Self::get_mod_methods(module)?;
+
+        let mod_ident = &module.ident;
+        let prefix = quote! { #mod_ident :: };
+
+        let path = Path::from(Ident::new(&name, Span::call_site()));
+
         Ok(Self {
-            module,
-            name: Ident::new(&name, Span::call_site()),
+            vis: Some(&module.vis),
+            prefix,
+            name: TypePath{ qself: None, path},
             methods,
         })
     }
 
-    pub fn ident(&self) -> &Ident {
+    pub fn from_impl_block(impl_block: &'m syn::ItemImpl) -> syn::Result<Self> {
+        let methods = Self::get_impl_methods(impl_block)?;
+        Ok(Self {
+            vis: None,
+            prefix: quote!{},
+            name: Self::get_impl_struct_name(impl_block)?,
+            methods,
+        })
+    }
+
+    pub fn name_path(&self) -> &TypePath {
         &self.name
     }
 
     pub fn visibility(&self) -> &syn::Visibility {
-        &self.module.vis
+        self.vis.unwrap_or(&syn::Visibility::Inherited)
     }
 
     pub fn methods(&self) -> (Vec<String>, Vec<TokenStream2>, Vec<TokenStream2>) {
@@ -34,12 +52,9 @@ impl<'m> SciterMod<'m> {
         let mut calls = Vec::new();
         let mut impls = Vec::new();
 
-        let mod_ident = &self.module.ident;
-        let prefix = quote! { #mod_ident :: };
-
         for method in &self.methods {
             let call = method.call_ident();
-            let body = method.body(&prefix);
+            let body = method.body(&self.prefix);
             let call_impl = quote! {
                 fn #call(args: &[::rsciter::Value]) -> ::rsciter::Result<Option<::rsciter::Value>> {
                     #body
@@ -69,5 +84,30 @@ impl<'m> SciterMod<'m> {
         }
 
         Ok(res)
+    }
+
+    fn get_impl_methods(impl_block: &'m syn::ItemImpl) -> syn::Result<Vec<MethodInfo<'m>>> {
+        let mut res = Vec::<MethodInfo>::new();
+
+        Ok(res)
+    }
+
+    fn get_impl_struct_name(impl_block: &syn::ItemImpl) -> syn::Result<TypePath> {
+        if impl_block.generics.lt_token.is_some() {
+            return Err(syn::Error::new(
+                impl_block.generics.span(),
+                "#[rsciter::xmod] Generic impl blocks are not supported!",
+            ));
+        }
+
+        let ty = impl_block.self_ty.as_ref();
+
+        match ty {
+            syn::Type::Path(path) => Ok(path.clone()),
+            _ => Err(syn::Error::new(
+                ty.span(),
+                "#[rsciter::xmod] Unsupported impl block type!",
+            )),
+        }
     }
 }
