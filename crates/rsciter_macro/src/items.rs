@@ -51,7 +51,11 @@ impl<'m> MethodInfo<'m> {
 
     #[allow(unreachable_code)]
     pub fn body(&self, prefix: &TokenStream2) -> TokenStream2 {
-        let arg_count = self.args.len();
+        let mut arg_count = self.args.len();
+        if matches!(self.args.first(), Some(Arg::Reciever(_))) {
+            arg_count -= 1;
+        }
+        
         let (prelude, args) = if arg_count == 0 {
             (quote! { let _ = args; }, quote! {})
         } else {
