@@ -21,4 +21,27 @@ This is a work in progress library and is not yet ready for production use.
   }
   ```
 
-  For details, see the [./crates/rsciter/examples/window_functions.rs](https://github.com/vsrs/rsciter/blob/master/crates/rsciter/examples/window_functions.rs#L15) sample.
+  ```rust
+  struct StatefullApi {
+      state: u64,
+  }
+
+  #[rsciter::xmod] // or struct impl block
+  impl StatefullApi {
+      pub fn sum(&self, a: u64, b: u64) -> u64 {
+          a + b + self.state
+      }
+
+      pub fn update(&mut self, a: u64) {
+          self.state = a;
+      }
+
+      pub fn state(&self) -> u64 {
+          self.state
+      }
+  }
+  ```
+
+  For details, see this samples:
+  - [./crates/rsciter/examples/window_functions.rs](https://github.com/vsrs/rsciter/blob/master/crates/rsciter/examples/window_functions.rs#L15)
+  - [./crates/rsciter/examples/window_stateful_api.rs](https://github.com/vsrs/rsciter/blob/master/crates/rsciter/examples/window_stateful_api.rs#L15) 
