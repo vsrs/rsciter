@@ -253,7 +253,7 @@ pub(super) unsafe extern "C" fn element_proc_thunk(
                 }
 
                 EVENT_GROUPS::HANDLE_SOM => {
-                    let mut params = &mut *(params as *mut SOM_PARAMS);
+                    let params = &mut *(params as *mut SOM_PARAMS);
                     let cmd = SOM_EVENTS(params.cmd as i32);
                     match cmd {
                         SOM_EVENTS::SOM_GET_PASSPORT => {

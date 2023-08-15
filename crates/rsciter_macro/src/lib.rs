@@ -1,6 +1,6 @@
 use proc_macro::TokenStream;
 use proc_macro2::{Ident, TokenStream as TokenStream2};
-use proc_macro_error::{proc_macro_error, ResultExt};
+use proc_macro_error::proc_macro_error;
 use quote::quote;
 use syn::spanned::Spanned;
 
@@ -15,8 +15,15 @@ pub fn transparent(_attr: TokenStream, input: TokenStream) -> TokenStream {
 #[proc_macro_error]
 #[proc_macro_attribute]
 pub fn xmod(attr: TokenStream, input: TokenStream) -> TokenStream {
-    let data = xmod_impl(attr.into(), input.into()).unwrap_or_abort();
-    data.into()
+    let data = xmod_impl(attr.into(), input.into());
+    match data {
+        Ok(res) => res.into(),
+        Err(e) => {
+            let span = e.span();
+            let message = format!("{e}");
+            proc_macro_error::abort!(span, message);
+        }        
+    }
 }
 
 fn xmod_impl(attr: TokenStream2, input: TokenStream2) -> syn::Result<TokenStream2> {

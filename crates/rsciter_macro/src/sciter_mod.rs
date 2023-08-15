@@ -90,7 +90,7 @@ impl<'m> SciterMod<'m> {
         let mut methods = Vec::new();
         for it in &impl_block.items {
             match it {
-                syn::ImplItem::Method(m) if matches!(m.vis, Visibility::Public(_)) => {
+                syn::ImplItem::Fn(m) if matches!(m.vis, Visibility::Public(_)) => {
                     let info = MethodInfo::new(&m.sig)?;
                     methods.push(info);
                 }
