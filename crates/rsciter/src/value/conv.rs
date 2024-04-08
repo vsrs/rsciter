@@ -47,7 +47,22 @@ macro_rules! impl_primitive {
             }
         }
 
+        impl TryFrom<&$type> for Value {
+            type Error = Error;
+
+            fn try_from($val: &$type) -> Result<Self> {
+                let $val = *$val;
+                $to
+            }
+        }
+
         impl ToValue for $type {
+            fn to_value(val: Self) -> Result<Value> {
+                Value::try_from(val)
+            }
+        }
+
+        impl ToValue for &$type {
             fn to_value(val: Self) -> Result<Value> {
                 Value::try_from(val)
             }
@@ -66,6 +81,14 @@ impl_primitive!(u64, get_u64, val, Value::int64(val as i64));
 
 impl_from!(String, get_string);
 
+// impl<S: AsRef<str>> TryFrom<S> for Value {
+//     type Error = Error;
+
+//     fn try_from(value: S) -> std::prelude::v1::Result<Self, Self::Error> {
+//         todo!()
+//     }
+// }
+
 impl TryFrom<&str> for Value {
     type Error = Error;
 
@@ -76,7 +99,13 @@ impl TryFrom<&str> for Value {
 
 impl ToValue for &str {
     fn to_value(val: Self) -> Result<Value> {
-        Value::try_from(val)
+        Value::string(val)
+    }
+}
+
+impl ToValue for &&str { // for array items
+    fn to_value(val: Self) -> Result<Value> {
+        Value::string(*val)
     }
 }
 
@@ -90,7 +119,13 @@ impl TryFrom<String> for Value {
 
 impl ToValue for String {
     fn to_value(val: Self) -> Result<Value> {
-        Value::try_from(val)
+        Value::string(val)
+    }
+}
+
+impl ToValue for &String {
+    fn to_value(val: Self) -> Result<Value> {
+        Value::string(val)
     }
 }
 
@@ -121,5 +156,60 @@ impl ToValue for &Value {
 impl ToValue for Result<Value> {
     fn to_value(val: Self) -> Result<Value> {
         val
+    }
+}
+
+impl<T, const N: usize> TryFrom<&[T; N]> for Value
+where
+    for<'a> &'a T: ToValue,
+{
+    type Error = Error;
+
+    fn try_from(value: &[T; N]) -> Result<Self> {
+        Value::array_from(value.iter())
+    }
+}
+
+impl<T, const N: usize> TryFrom<[T; N]> for Value
+where
+    for<'a> &'a T: ToValue,
+{
+    type Error = Error;
+
+    fn try_from(value: [T; N]) -> Result<Self> {
+        Value::array_from(value.iter())
+    }
+}
+
+impl<T> TryFrom<&[T]> for Value
+where
+    for<'a> &'a T: ToValue,
+{
+    type Error = Error;
+
+    fn try_from(value: &[T]) -> Result<Self> {
+        Value::array_from(value.iter())
+    }
+}
+
+impl<T> TryFrom<Vec<T>> for Value
+where
+    for<'a> &'a T: ToValue,
+{
+    type Error = Error;
+
+    fn try_from(value: Vec<T>) -> Result<Self> {
+        Value::array_from(value.iter())
+    }
+}
+
+impl<T> TryFrom<&Vec<T>> for Value
+where
+    for<'a> &'a T: ToValue,
+{
+    type Error = Error;
+
+    fn try_from(value: &Vec<T>) -> Result<Self> {
+        Value::array_from(value.iter())
     }
 }

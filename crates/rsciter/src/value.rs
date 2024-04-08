@@ -18,6 +18,16 @@ impl Debug for Value {
     }
 }
 
+impl Eq for Value {}
+impl PartialEq for Value {
+    fn eq(&self, other: &Self) -> bool {
+        // assume all values are different if sapi call failed
+        sapi()
+            .and_then(|api| api.value_compare(&self.0, &other.0))
+            .unwrap_or(false)
+    }
+}
+
 impl Value {
     pub fn bool(v: bool) -> Result<Self> {
         let mut this = Self::new();
@@ -63,6 +73,23 @@ impl Value {
         for (idx, item) in data.iter().enumerate() {
             api.value_nth_element_value_set(&mut this.0, idx as i32, &item.0)?;
         }
+        Ok(this)
+    }
+
+    pub fn array_from<'a, T>(data: impl Iterator<Item = &'a T>) -> Result<Self>
+    where
+        T: 'a,
+        for<'i> &'i T: conv::ToValue,
+    {
+        let mut this = Self::new();
+        let api = sapi()?;
+        api.value_int_data_set(&mut this.0, 0, VALUE_TYPE::T_ARRAY, None)?;
+
+        for (idx, item) in data.enumerate() {
+            let item_val = conv::ToValue::to_value(item)?;
+            api.value_nth_element_value_set(&mut this.0, idx as i32, &item_val.0)?;
+        }
+
         Ok(this)
     }
 
@@ -816,4 +843,56 @@ pub mod tests {
     }
 
     // TODO: more tests
+
+    // TryFrom tests
+    #[test]
+    fn test_from_bool() {
+        let val = Value::try_from(true).unwrap();
+        assert_eq!(val, Value::bool(true).unwrap());
+    }
+
+    #[test]
+    fn test_from_int() {
+        let val = Value::try_from(12).unwrap();
+        assert_eq!(val, Value::int(12).unwrap());
+    }
+
+    #[test]
+    fn test_from_str() {
+        let val = Value::try_from("sss").unwrap();
+        assert_eq!(val, Value::string("sss").unwrap());
+    }
+
+    #[test]
+    fn test_from_string() {
+        let val = Value::try_from("SSS".to_string()).unwrap();
+        assert_eq!(val, Value::string("SSS").unwrap());
+    }
+
+    #[test]
+    fn test_from_int_array() {
+        let val = Value::try_from([1, 2, 3, 4]).unwrap();
+        let val_ref = Value::try_from(&[1, 2, 3, 4]).unwrap();
+
+        assert!(val.is_array());
+        assert_eq!(val.len().unwrap(), 4);
+
+        assert_eq!(val, val_ref);
+    }
+
+    #[test]
+    fn test_from_str_array_vec() {
+        let val = Value::try_from(["1", "2", "3", "4"]).unwrap();
+        let val_vec = Value::try_from(vec!["1", "2", "3", "4"]).unwrap();
+
+        let val_ref = Value::try_from(&["1", "2", "3", "4"]).unwrap();
+        let val_vec_ref = Value::try_from(&vec!["1", "2", "3", "4"]).unwrap();
+
+        assert!(val.is_array());
+        assert_eq!(val.len().unwrap(), 4);        
+
+        assert_eq!(val, val_vec);
+        assert_eq!(val, val_ref);
+        assert_eq!(val, val_vec_ref);
+    }
 }
