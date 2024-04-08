@@ -8,7 +8,7 @@ fn main() {
     }
 }
 
-const HTML: &[u8] = include_bytes!("./window_asset.html");
+const HTML: &'static [u8] = include_bytes!("./window_asset.html");
 
 fn try_main() -> Result<i32> {
     app::init()?;

@@ -43,7 +43,7 @@ fn try_main() -> Result<i32> {
 struct Host;
 
 impl Host {
-    const HTML: &[u8] = b"<body>Press SPACE to post a notification to the host</body>";
+    const HTML: &'static [u8] = b"<body>Press SPACE to post a notification to the host</body>";
 }
 
 impl HostNotifications for Host {

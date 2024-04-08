@@ -8,7 +8,7 @@ fn main() {
     }
 }
 
-const HTML: &[u8] = br##"<html>
+const HTML: &'static [u8] = br##"<html>
 <head>
 <script>
     console.log("log message");

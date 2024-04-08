@@ -29,7 +29,7 @@ fn try_main() -> Result<i32> {
 struct Host;
 
 impl Host {
-    const HTML: &[u8] = b"<body>The host to rule them all!</body>";
+    const HTML: &'static [u8] = b"<body>The host to rule them all!</body>";
 }
 
 impl HostNotifications for Host {

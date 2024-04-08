@@ -12,7 +12,7 @@ pub struct MethodInfo<'m> {
 }
 
 enum Arg<'m> {
-    Reciever(&'m Receiver),
+    Reciever(#[allow(dead_code)] &'m Receiver),
     Arg(ArgInfo<'m>),
 }
 

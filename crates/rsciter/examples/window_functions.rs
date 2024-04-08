@@ -48,7 +48,7 @@ fn print_args(args: &[Value]) -> Result<Option<Value>> {
     Ok(None)
 }
 
-const HTML: &[u8] = br#"
+const HTML: &'static [u8] = br#"
 <html>
 <head>
 <script>

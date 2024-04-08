@@ -46,7 +46,7 @@ fn try_main() -> Result<i32> {
     Ok(exit_code)
 }
 
-const HTML: &[u8] = br#"
+const HTML: &'static [u8] = br#"
 <html>
 <head>
 <script>

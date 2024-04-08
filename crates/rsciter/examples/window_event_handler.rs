@@ -8,7 +8,7 @@ fn main() {
     }
 }
 
-const HTML: &[u8] = br#"
+const HTML: &'static [u8] = br#"
 <html>
 <head>
 <script>
