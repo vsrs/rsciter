@@ -478,7 +478,7 @@ impl<'api> Api<'api> {
 
     /// Returns string data for T_STRING type
     /// For T_FUNCTION returns name of the fuction.
-    pub fn value_string_data(&self, value: &VALUE) -> Result<&[u16]> {
+    pub fn value_string_data<'v>(&self, value: &'v VALUE) -> Result<&'v [u16]> {
         call_method!(self, ValueStringData as f, {
             let mut chars = MaybeUninit::<LPCWSTR>::uninit();
             let mut count = MaybeUninit::<UINT>::uninit();
@@ -512,7 +512,7 @@ impl<'api> Api<'api> {
         )
     }
 
-    /// Retreives integer data of T_INT, T_LENGTH and T_BOOL types
+    /// Retrieves integer data of T_INT, T_LENGTH and T_BOOL types
     pub fn value_int_data(&self, value: &VALUE) -> Result<i32> {
         value_ret_val!(self, ValueIntData(value) as i32)
     }
@@ -531,7 +531,7 @@ impl<'api> Api<'api> {
         value_impl_set!(self, value, ValueIntDataSet, data, atype, units)
     }
 
-    /// Retreive 64bit integer data of T_BIG_INT and T_DATE values.
+    /// Retrieve 64bit integer data of T_BIG_INT and T_DATE values.
     pub fn value_int64_data(&self, value: &VALUE) -> Result<i64> {
         value_ret_val!(self, ValueInt64Data(value) as i64)
     }
@@ -548,7 +548,7 @@ impl<'api> Api<'api> {
         value_impl_set!(self, value, ValueInt64DataSet, data, atype, units)
     }
 
-    /// Retreive FLOAT_VALUE (double) data of T_FLOAT and T_LENGTH values.
+    /// Retrieve FLOAT_VALUE (double) data of T_FLOAT and T_LENGTH values.
     pub fn value_float_data(&self, value: &VALUE) -> Result<f64> {
         value_ret_val!(self, ValueFloatData(value) as f64)
     }
@@ -565,8 +565,8 @@ impl<'api> Api<'api> {
         value_impl_set!(self, value, ValueFloatDataSet, data, atype, units)
     }
 
-    /// Retreive integer data of T_BYTES type
-    pub fn value_binary_data(&self, value: &VALUE) -> Result<&[u8]> {
+    /// Retrieve integer data of T_BYTES type
+    pub fn value_binary_data<'v>(&self, value: &'v VALUE) -> Result<&'v [u8]> {
         call_method!(self, ValueBinaryData as f, {
             let mut bytes = MaybeUninit::<LPCBYTE>::uninit();
             let mut count = MaybeUninit::<UINT>::uninit();
@@ -601,7 +601,7 @@ impl<'api> Api<'api> {
         )
     }
 
-    /// retreive number of sub-elements for:
+    /// Retrieve number of sub-elements for:
     /// - T_ARRAY - number of elements in the array;
     /// - T_MAP - number of key/value pairs in the map;
     /// - T_FUNCTION - number of arguments in the function;
@@ -609,7 +609,7 @@ impl<'api> Api<'api> {
         value_ret_val!(self, ValueElementsCount(value) as INT).map(|r| r as usize)
     }
 
-    /// retreive value of sub-element at index n for:
+    /// Retrieve value of sub-element at index n for:
     /// - T_ARRAY - nth element of the array;
     /// - T_MAP - value of nth key/value pair in the map;
     /// - T_FUNCTION - value of nth argument of the function;

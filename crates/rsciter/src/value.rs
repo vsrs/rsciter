@@ -293,8 +293,12 @@ impl Value {
         Ok(())
     }
 
-    pub fn get_bytes(&self) -> Result<Vec<u8>> {
-        sapi()?.value_binary_data(&self.0).map(|v| v.to_vec())
+    pub fn get_bytes(&self) -> Result<&[u8]> {
+        sapi()?.value_binary_data(&self.0)
+    }
+
+    pub fn get_bytes_vec(&self) -> Result<Vec<u8>> {
+        self.get_bytes().map(|v| v.to_vec())
     }
 
     pub fn get_color(&self) -> Result<i32> {
