@@ -51,8 +51,8 @@ pub enum Error {
     #[error("Scripting error, invalid arguments count: {0}")]
     ScriptingInvalidArgCount(String),
 
-    #[error("Scripting error, invalid argument: {0}")]
-    ScriptingInvalidArgument(String),
+    #[error("Scripting error, invalid argument: {0}: {1}")]
+    ScriptingInvalidArgument(&'static str, Box<Error>),
 
     #[error("unknown Sciter error")]
     Unknown,

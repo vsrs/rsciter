@@ -33,9 +33,13 @@ impl DefaultEventHandler {
 
         // all modules share single namespace
         for module in self.modules.iter_mut() {
-            let res = module.call(name, args);
-            if res.is_ok() {
-                return res;
+            match module.call(name, args) {
+                Ok(res) => return Ok(res),                
+                Err(crate::Error::ScriptingNoMethod(_)) => { /*try next module */ },
+                Err(err) => {
+                    // there was a method with such name, but failed
+                    return Err(err);
+                }
             }
         }
 

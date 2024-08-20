@@ -176,18 +176,19 @@ impl ArgInfo<'_> {
     pub fn convertion(&self, idx: usize) -> TokenStream2 {
         let ident = self.ident();
         let path = Self::get_type_path(self.pat_type);
+        let arg_name = ident.to_string();
 
         match path {
             Some(path) if Self::last_segment_is(path, "str") => quote! {
-                let #ident = <String as ::rsciter::conv::FromValue>::from_value(&args[#idx])?;
+                let #ident = <String as ::rsciter::conv::FromValue>::from_value(&args[#idx]).map_err(|err| ::rsciter::Error::ScriptingInvalidArgument(#arg_name, Box::new(err)) )?;
             },
 
             Some(path) if !Self::last_segment_is(path, "Value") => quote! {
-                let #ident = <#path as ::rsciter::conv::FromValue> :: from_value(&args[#idx])?;
+                let #ident = <#path as ::rsciter::conv::FromValue> :: from_value(&args[#idx]).map_err(|err| ::rsciter::Error::ScriptingInvalidArgument(#arg_name, Box::new(err)) )?;
             },
 
             _ => quote! {
-                let #ident = ::rsciter::conv::FromValue::from_value(&args[#idx])?;
+                let #ident = ::rsciter::conv::FromValue::from_value(&args[#idx]).map_err(|err| ::rsciter::Error::ScriptingInvalidArgument(#arg_name, Box::new(err)) )?;
             },
         }
     }
