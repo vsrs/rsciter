@@ -6,10 +6,27 @@ use syn::spanned::Spanned;
 
 pub(crate) mod items;
 pub(crate) mod sciter_mod;
+pub(crate) mod passport;
+
+use passport::passport_impl;
 
 #[proc_macro_attribute]
 pub fn transparent(_attr: TokenStream, input: TokenStream) -> TokenStream {
     input
+}
+
+#[proc_macro_error]
+#[proc_macro_attribute]
+pub fn passport(attr: TokenStream, input: TokenStream) -> TokenStream {
+    let data = passport_impl(attr.into(), input.into());
+    match data {
+        Ok(res) => res.into(),
+        Err(e) => {
+            let span = e.span();
+            let message = format!("{e}");
+            proc_macro_error::abort!(span, message);
+        }        
+    }
 }
 
 #[proc_macro_error]

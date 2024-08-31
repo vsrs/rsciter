@@ -1,7 +1,7 @@
 #![allow(clippy::not_unsafe_ptr_arg_deref)]
 
 use crate::{args_as_raw_slice, bindings::*, utf, Error, EventGroups, Result, Value, ValueError};
-use std::mem::MaybeUninit;
+use std::{ffi::CString, mem::MaybeUninit};
 
 mod graphics;
 mod request;
@@ -733,6 +733,35 @@ impl<'api> Api<'api> {
         // ValueIsNativeFunctor returns 1 for the native functor
     }
 
+    pub fn atom(&self, name: &str) -> Result<som_atom_t> {
+        let cs = CString::new(name).unwrap();
+        call_method!(
+            self,
+            SciterAtomValue(cs.as_ptr() as _) as som_atom_t
+        )
+    }
+    
+    pub fn atom_name(&self, id: som_atom_t) -> Option<String> {
+        let mut s = String::new();
+        let ret = call_method!(
+            self,
+            SciterAtomNameCB(id, None, &mut s as *mut _ as LPVOID)
+        );
+        if ret.is_ok_and(|res| res != 0) {
+            Some(s)
+        }
+        else {
+            None
+        }
+    }
+
+    pub fn set_global_asset(&self, som_asset: *mut som_asset_t) -> Result<SBOOL>{
+        call_method!(
+            self, 
+            SciterSetGlobalAsset(som_asset)
+        )
+    }
+
     ///////////////////
     pub fn open_archive(&self, data: &[u8]) -> Result<HSARCHIVE> {
         call_method!(self, SciterOpenArchive(data.as_ptr(), data.len() as u32))
@@ -850,6 +879,14 @@ macro_rules! call_method {
 
     ($self:ident, $name:ident($( $arg:expr ),*) as bool) => {
         call_method!($self, $name($($arg),*)).map(|res| res != 0)
+    };
+
+    ($self:ident, $name:ident($( $arg:expr ),*) as som_atom_t) => {
+        call_method!($self, $name($($arg),*))
+    };
+
+    ($self:ident, $name:ident($( $arg:expr ),*) as Result<T>) => {
+        call_method!($self, $name($($arg),*))
     };
 
     ($self:ident, $name:ident($( $arg:expr ),*) as VALUE_RESULT) => {

@@ -10,6 +10,7 @@ mod options;
 pub mod utf;
 mod value;
 mod window;
+pub mod som;
 
 pub use archive::*;
 pub use debug::*;

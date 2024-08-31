@@ -598,7 +598,7 @@ impl From<ToStringKind> for VALUE_STRING_CVT_TYPE {
     }
 }
 
-pub(crate) fn args_from_raw_parts<'a>(argv: *const VALUE, argc: u32) -> &'a [Value] {
+pub fn args_from_raw_parts<'a>(argv: *const VALUE, argc: u32) -> &'a [Value] {
     if argv.is_null() || argc == 0 {
         return &[];
     }

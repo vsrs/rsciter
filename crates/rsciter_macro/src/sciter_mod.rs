@@ -69,6 +69,44 @@ impl<'m> SciterMod<'m> {
         (names, calls, impls)
     }
 
+    pub fn passport_methods(&self) -> (Vec<String>, Vec<TokenStream2>, Vec<TokenStream2>) {
+        let mut names = Vec::new();
+        let mut calls = Vec::new();
+        let mut impls = Vec::new();
+
+        for method in &self.methods {
+            let call = method.call_ident();
+            let body = method.passport_body(&self.prefix);
+            let name = self.name_path();
+            let call_impl = quote! {
+                unsafe extern "C" fn #call(
+                    thing: *mut som_asset_t,
+                    argc: UINT,
+                    argv: *const VALUE,
+                    p_result: *mut VALUE
+                ) -> SBOOL {
+                    let me = ::rsciter::som::IAsset::<#name>::from_raw(&thing);
+                    let args = ::rsciter::args_from_raw_parts(argv, argc);
+                    #body
+                }
+            };
+
+            names.push(method.name());
+            let method_name = method.name();
+            let args_count: usize = method.args_count() - 1;
+            calls.push(quote! {
+                method.name = sapi.atom(#method_name).unwrap();
+                method.func = Some(#call);
+                method.params = #args_count;
+            });
+            impls.push(call_impl);
+        }
+
+        (names, calls, impls)
+    }
+
+    
+
     fn get_mod_methods(module: &'m syn::ItemMod) -> syn::Result<Vec<MethodInfo<'m>>> {
         let mut res = Vec::<MethodInfo>::new();
         if let Some((_, items)) = module.content.as_ref() {

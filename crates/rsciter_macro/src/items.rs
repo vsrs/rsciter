@@ -49,6 +49,10 @@ impl<'m> MethodInfo<'m> {
         &self.call_ident
     }
 
+    pub fn args_count(&self) -> usize {
+        self.args.len()
+    }
+
     #[allow(unreachable_code)]
     pub fn body(&self, prefix: &TokenStream2) -> TokenStream2 {
         let mut arg_count = self.args.len();
@@ -106,6 +110,72 @@ impl<'m> MethodInfo<'m> {
                 #prelude
                 let result = #prefix #method ( #args );
                 ::rsciter::conv::ToValue::to_value(result).map(|res| Some(res))
+            }
+        }
+    }
+
+    #[allow(unreachable_code)]
+    pub fn passport_body(&self, prefix: &TokenStream2) -> TokenStream2 {
+        let mut arg_count = self.args.len();
+        if matches!(self.args.first(), Some(Arg::Reciever(_))) {
+            arg_count -= 1;
+        }
+
+        let (prelude, args) = if arg_count == 0 {
+            (quote! { let _ = argc; }, quote! {})
+        } else {
+            let method_name = self.name();
+
+            let mut arg_names = Vec::new();
+            let mut convertions = Vec::new();
+            let mut calls = Vec::new();
+            for (idx, arg) in self
+                .args
+                .iter()
+                .filter_map(|it| match it {
+                    Arg::Arg(a) => Some(a),
+                    _ => None,
+                })
+                .enumerate()
+            {
+                arg_names.push(arg.ident());
+                convertions.push(arg.convertion(idx));
+                calls.push(arg.call());
+            }
+
+            (
+                {
+                    quote! {
+                        if args.len() != #arg_count {
+                            *p_result = Value::error_string(::rsciter::Error::ScriptingInvalidArgCount(#method_name .to_string()).to_string())
+                                .unwrap()
+                                .take();
+                            return false as SBOOL;
+                        }
+
+                        #(#convertions)*
+                    }
+                },
+                {
+                    quote! { #(#calls),* }
+                },
+            )
+        };
+
+        let method = &self.sig.ident;
+        if matches!(self.sig.output, ReturnType::Default) {
+            quote! {
+                #prelude
+                #prefix #method ( #args );
+                Ok(None)
+            }
+        } else {
+            quote! {
+                #prelude
+                let result = me.#method ( #args );
+                let result = ::rsciter::conv::ToValue::to_value(result).map(|res| res);
+                *p_result = result.unwrap().take();
+                return true as SBOOL;
             }
         }
     }
@@ -180,15 +250,15 @@ impl ArgInfo<'_> {
 
         match path {
             Some(path) if Self::last_segment_is(path, "str") => quote! {
-                let #ident = <String as ::rsciter::conv::FromValue>::from_value(&args[#idx]).map_err(|err| ::rsciter::Error::ScriptingInvalidArgument(#arg_name, Box::new(err)) )?;
+                let #ident = <String as ::rsciter::conv::FromValue>::from_value(&args[#idx]).map_err(|err| ::rsciter::Error::ScriptingInvalidArgument(#arg_name, Box::new(err)) ).unwrap();
             },
 
             Some(path) if !Self::last_segment_is(path, "Value") => quote! {
-                let #ident = <#path as ::rsciter::conv::FromValue> :: from_value(&args[#idx]).map_err(|err| ::rsciter::Error::ScriptingInvalidArgument(#arg_name, Box::new(err)) )?;
+                let #ident = <#path as ::rsciter::conv::FromValue>::from_value(&args[#idx]).map_err(|err| ::rsciter::Error::ScriptingInvalidArgument(#arg_name, Box::new(err)) ).unwrap();
             },
 
             _ => quote! {
-                let #ident = ::rsciter::conv::FromValue::from_value(&args[#idx]).map_err(|err| ::rsciter::Error::ScriptingInvalidArgument(#arg_name, Box::new(err)) )?;
+                let #ident = ::rsciter::conv::FromValue::from_value(&args[#idx]).map_err(|err| ::rsciter::Error::ScriptingInvalidArgument(#arg_name, Box::new(err)) ).unwrap();
             },
         }
     }
