@@ -167,6 +167,12 @@ impl Value {
     }
 }
 
+impl Default for Value {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 // const block
 impl Value {
     // ValueInit() call can be omitted if storage of the VALUE is initialized by all zeroes.
@@ -889,7 +895,7 @@ pub mod tests {
         let val_vec_ref = Value::try_from(&vec!["1", "2", "3", "4"]).unwrap();
 
         assert!(val.is_array());
-        assert_eq!(val.len().unwrap(), 4);        
+        assert_eq!(val.len().unwrap(), 4);
 
         assert_eq!(val, val_vec);
         assert_eq!(val, val_ref);
