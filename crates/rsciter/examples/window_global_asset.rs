@@ -20,8 +20,8 @@ const HTML: &'static [u8] = br#"
     console.log(personA.print);
     console.log(personA.print());
     console.log(personA.add_year);
-    console.log(personA.print());
     console.log(personA.add_year(15));
+    console.log(personA.print());
     console.log(personA.add_year()); //should throw error
   </script>
 </head>
