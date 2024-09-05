@@ -1,13 +1,18 @@
 #![allow(non_snake_case, non_camel_case_types, non_upper_case_globals)]
 #![allow(dead_code)]
+#![allow(clippy::type_complexity)]
 
-// see crates/rsciter/generate.ps1
-#[allow(clippy::type_complexity)]
+#[cfg(not(feature = "codegen"))]
 mod generated;
+
+#[cfg(feature = "codegen")]
+mod generated {
+    include!(concat!(env!("OUT_DIR"), "/generated.rs"));
+}
 
 pub use generated::*;
 
-// define _PTR type manually, as they depends on platform
+// define _PTR types manually, as they depends on platform
 pub type INT_PTR = isize;
 pub type UINT_PTR = usize;
 pub type LONG_PTR = isize;

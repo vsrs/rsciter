@@ -621,6 +621,7 @@ impl<'api> Api<'api> {
     /// - T_ARRAY - nth element of the array;
     /// - T_MAP - value of nth key/value pair in the map;
     /// - T_FUNCTION - value of nth argument of the function;
+    ///
     /// If the VALUE is not of one of types above then it makes it of type T_ARRAY with
     /// single element - 'val_to_set'.
     pub fn value_nth_element_value_set(&self, dst: &mut VALUE, n: INT, src: &VALUE) -> Result<()> {
@@ -950,6 +951,6 @@ macro_rules! value_ret_val {
 }
 
 // to make visible in submodules and above definitions
-pub(self) use call_method;
-pub(self) use value_impl_set;
-pub(self) use value_ret_val;
+use call_method;
+use value_impl_set;
+use value_ret_val;

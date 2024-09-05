@@ -22,6 +22,9 @@ features = [
     "Win32_UI_WindowsAndMessaging"
 ]
 
+[build-dependencies]
+bindgen = { version = "0.70", optional = true }
+
 # unfortunately this does not work
 # https://github.com/rust-lang/cargo/issues/1197
 #
@@ -33,6 +36,9 @@ features = [
 
 [features]
 default = ["dynamic"]
+
+# Generate new bindings at build-time instead of pre-generated code.
+codegen = ["bindgen"]
 
 # Use Sciter shared library
 dynamic = []
