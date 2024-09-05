@@ -150,7 +150,7 @@ impl<'m> MethodInfo<'m> {
                             *p_result = Value::error_string(::rsciter::Error::ScriptingInvalidArgCount(#method_name .to_string()).to_string())
                                 .unwrap()
                                 .take();
-                            return false as SBOOL;
+                            return true as SBOOL;
                         }
 
                         #(#convertions)*

@@ -263,6 +263,8 @@ impl Default for som_passport_t {
 	fn default() -> Self {
 		use std::ptr;
 		Self {
+			reserved: ptr::null_mut(),
+			name_resolver: None,
 			flags: 0,
 			name: 0,
 
