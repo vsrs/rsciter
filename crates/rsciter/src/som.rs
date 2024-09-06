@@ -312,6 +312,37 @@ impl<T: HasPassport> IAsset<T> for GlobalAsset<T> {
     }
 }
 
+impl<T: HasPassport> Drop for GlobalAsset<T> {
+    fn drop(&mut self) {
+        let ptr = &self.obj as *const _ as *const som_asset_t as *mut _;
+        let _res = sapi().and_then(|api| api.release_global_asset(ptr));
+        debug_assert!(_res.is_ok());
+    }
+}
+
+impl<T: HasPassport> GlobalAsset<T> {
+    pub fn new(data: T) -> Result<Self> {
+        let obj = AssetObj::new(Self::class());
+        let res = AssetData {
+            _obj: obj.clone(),
+            data,
+        };
+
+        let boxed = Box::new(res);
+        let ptr = Box::into_raw(boxed);
+
+        // SciterSetGlobalAsset overrides assets, so it might return false only if there is no asset_get_passport callback,
+        // as we always provide one, it's safe to ignore the result
+        let _res = sapi()?.set_global_asset(ptr as _)?;
+        debug_assert!(_res);
+
+        Ok(Self {
+            obj,
+            _t: PhantomData,
+        })
+    }
+}
+
 #[repr(C)]
 pub struct AssetData<T> {
     _obj: AssetObj,
@@ -339,29 +370,6 @@ impl<T> Deref for AssetRef<'_, T> {
 
     fn deref(&self) -> &Self::Target {
         &self.data()
-    }
-}
-
-impl<T: HasPassport> GlobalAsset<T> {
-    pub fn new(data: T) -> Result<Self> {
-        let obj = AssetObj::new(Self::class());
-        let res = AssetData {
-            _obj: obj.clone(),
-            data,
-        };
-
-        let boxed = Box::new(res);
-        let ptr = Box::into_raw(boxed);
-
-        // SciterSetGlobalAsset overrides assets, so it might return false only if there is no asset_get_passport callback,
-        // as we always provide one, it's safe to ignore the result
-        let _res = sapi()?.set_global_asset(ptr as _)?;
-        debug_assert!(_res);
-
-        Ok(Self {
-            obj,
-            _t: PhantomData,
-        })
     }
 }
 

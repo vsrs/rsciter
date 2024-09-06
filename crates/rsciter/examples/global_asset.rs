@@ -11,12 +11,16 @@ fn main() {
 const HTML: &'static [u8] = br#"<html>
 <head>
   <script>
-    console.log(Person);
-    console.log("age: ", Person.age);
-    console.log("name: ", Person.name);
+    if (typeof Person === 'undefined') {
+      console.log("No Person");
+    } else {
+      console.log(Person);
+      console.log("age: ", Person.age);
+      console.log("name: ", Person.name);
 
-    Person.test = 4;
-    console.log(Person.test);
+      Person.test = 4;
+      console.log(Person.test);
+    }
   </script>
 </head>
 
@@ -103,10 +107,20 @@ fn try_main() -> Result<i32> {
         eprintln!("Sub: {:?}, Level: {:?}, {text}", sub, sev);
     })?;
 
-    let _person_glob = som::GlobalAsset::new(Person {
+    let person_asset = som::GlobalAsset::new(Person {
         age: 42,
         name: "Arthur".into(),
     })?;
+
+    let window = Window::builder().with_html(HTML).build_main()?;
+    window.show(Visibility::Normal)?;
+
+    let _exit_code = app::run()?;
+
+    // try to comment and see output
+    drop(person_asset);
+
+    eprintln!("Start second session (with dropped asset)");
 
     let window = Window::builder().with_html(HTML).build_main()?;
     window.show(Visibility::Normal)?;
