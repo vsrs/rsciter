@@ -39,6 +39,24 @@ pub fn set_option(option: RuntimeOption) -> Result<bool> {
             v as UINT_PTR,
         ),
         RuntimeOption::PxAsDip(v) => (SCITER_RT_OPTIONS::SCITER_SET_PX_AS_DIP, v as UINT_PTR),
+
+        RuntimeOption::UIAutomation(v) => {
+            (SCITER_RT_OPTIONS::SCITER_ENABLE_UIAUTOMATION, v as UINT_PTR)
+        }
+        RuntimeOption::UseInternalHttpClient(v) => (
+            SCITER_RT_OPTIONS::SCITER_USE_INTERNAL_HTTP_CLIENT,
+            v as UINT_PTR,
+        ),
+        RuntimeOption::ExtendedTouchpadSupport(v) => (
+            SCITER_RT_OPTIONS::SCITER_EXTENDED_TOUCHPAD_SUPPORT,
+            v as UINT_PTR,
+        ),
+        RuntimeOption::EnableDirectComposition(v) => (
+            SCITER_RT_OPTIONS::SCITER_ENABLE_DIRECT_COMPOSITION,
+            v as UINT_PTR,
+        ),
+
+        RuntimeOption::Raw(opt, v) => (opt, v as UINT_PTR),
     };
 
     sapi()?.set_option(None, option, value)
@@ -69,6 +87,11 @@ pub enum RuntimeOption {
     MaxHttpDataSize(usize),
     /// true - 1px in CSS is treated as 1dip, false (default) - 1px is a physical pixel.  
     PxAsDip(bool),
+    UIAutomation(bool),
+    UseInternalHttpClient(bool),
+    ExtendedTouchpadSupport(bool),
+    EnableDirectComposition(bool),
+    Raw(SCITER_RT_OPTIONS, usize),
 }
 
 pub enum HttpsErrorAction {
