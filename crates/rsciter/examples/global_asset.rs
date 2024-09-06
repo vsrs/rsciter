@@ -1,8 +1,5 @@
-use std::sync::OnceLock;
-
-use bindings::{som_asset_t, SBOOL, SCITER_VALUE};
 use rsciter::*;
-use som::HasPassport;
+use std::sync::OnceLock;
 
 fn main() {
     if let Err(e) = try_main() {
@@ -16,6 +13,7 @@ const HTML: &'static [u8] = br#"<html>
 <head>
   <script>
     console.log(Person);
+    Person.test = 4;
   </script>
 </head>
 
@@ -31,23 +29,19 @@ pub struct Person {
 }
 
 impl som::ItemGetter for Person {
-    fn get_item(&self, key: Value) -> Result<Option<Value>> {
+    fn get_item(&self, key: &Value) -> Result<Option<Value>> {
+        dbg!(key);
+
         Ok(None)
     }
 }
 
-extern "C" fn item_getter_thunk<T: som::ItemGetter>(
-    thing: *mut som_asset_t,
-    p_key: *const SCITER_VALUE,
-    p_value: *mut SCITER_VALUE,
-) -> SBOOL {
-    let _ = p_value;
-    let _ = p_key;
-    let _ = thing;
+impl som::ItemSetter for Person {
+    fn set_item(&self, key: &Value, value: &Value) -> Result<()> {
+        dbg!(key, value);
 
-    println!("asdf");
-
-    return 0;
+        Ok(())
+    }
 }
 
 impl som::HasPassport for Person {
@@ -57,12 +51,17 @@ impl som::HasPassport for Person {
         let res = PASSPORT.get_or_init(|| {
             let mut passport = bindings::som_passport_t::new(c"Person")?;
             use som::HasItemGetter;
+            use som::HasItemSetter;
 
-            if (&mut &mut &self).has_item_getter() {
-                passport.item_getter = Some(item_getter_thunk::<Person>);
+            if (&mut &self).has_item_getter() {
+                som::impl_item_getter!(Person);
+                passport.item_getter = Some(item_getter);
             }
 
-            passport.flags = 0;
+            if (&mut &self).has_item_setter() {
+                som::impl_item_setter!(Person);
+                passport.item_setter = Some(item_setter);
+            }
 
             Ok(passport)
         });

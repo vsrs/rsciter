@@ -107,33 +107,119 @@ pub trait HasPassport {
     fn passport(&self) -> Result<&'static som_passport_t>;
 }
 
-pub trait ItemGetter : HasPassport {
-    fn get_item(&self, key: Value) -> Result<Option<Value>>;
+pub trait ItemGetter: HasPassport {
+    fn get_item(&self, key: &Value) -> Result<Option<Value>>;
 }
-
 pub trait HasItemGetter {
     fn has_item_getter(&self) -> bool;
-    fn do_get_item(&self, key: Value) -> Result<Option<Value>>;
+    fn do_get_item(&self, key: &Value) -> Result<Option<Value>>;
 }
 
 impl<T> HasItemGetter for &&T {
+    #[inline(always)]
     fn has_item_getter(&self) -> bool {
         false
     }
-    fn do_get_item(&self, key: Value) -> Result<Option<Value>> {
-        _ = key;
+
+    fn do_get_item(&self, _key: &Value) -> Result<Option<Value>> {
         Ok(None)
     }
 }
 
 impl<T: ItemGetter> HasItemGetter for &mut &&T {
+    #[inline(always)]
     fn has_item_getter(&self) -> bool {
         true
     }
-    fn do_get_item(&self, key: Value) -> Result<Option<Value>> {
+
+    fn do_get_item(&self, key: &Value) -> Result<Option<Value>> {
         self.get_item(key)
     }
 }
+
+pub trait ItemSetter: HasPassport {
+    fn set_item(&self, key: &Value, value: &Value) -> Result<()>;
+}
+
+pub trait HasItemSetter {
+    fn has_item_setter(&self) -> bool;
+    fn do_set_item(&self, key: &Value, value: &Value) -> Result<()>;
+}
+
+impl<T> HasItemSetter for &&T {
+    #[inline(always)]
+    fn has_item_setter(&self) -> bool {
+        false
+    }
+
+    fn do_set_item(&self, _key: &Value, _value: &Value) -> Result<()> {
+        Ok(())
+    }
+}
+
+impl<T: ItemSetter> HasItemSetter for &mut &&T {
+    #[inline(always)]
+    fn has_item_setter(&self) -> bool {
+        true
+    }
+
+    fn do_set_item(&self, key: &Value, value: &Value) -> Result<()> {
+        self.set_item(key, value)
+    }
+}
+
+#[macro_export]
+macro_rules! impl_item_getter {
+    ($type:ty) => {
+        impl_item_getter!($type, item_getter)
+    };
+    ($type:ty, $name:ident) => {
+        extern "C" fn $name(
+            thing: *mut ::rsciter::bindings::som_asset_t,
+            p_key: *const ::rsciter::bindings::SCITER_VALUE,
+            p_value: *mut ::rsciter::bindings::SCITER_VALUE,
+        ) -> ::rsciter::bindings::SBOOL {
+            // SAFETY: Value has $[repr(transparent)]
+            let key = unsafe { &*(p_key as *const ::rsciter::Value) };
+
+            let asset_ref = unsafe { &*(thing as *mut ::rsciter::som::AssetData<$type>) };
+            let Ok(Some(res)) = (&mut &&asset_ref.data).do_get_item(key) else {
+                return 0;
+            };
+
+            unsafe { *p_value = res.take() };
+            return 1;
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! impl_item_setter {
+    ($type:ty) => {
+        impl_item_setter!($type, item_setter)
+    };
+    ($type:ty, $name:ident) => {
+        extern "C" fn $name(
+            thing: *mut ::rsciter::bindings::som_asset_t,
+            p_key: *const ::rsciter::bindings::SCITER_VALUE,
+            p_value: *const ::rsciter::bindings::SCITER_VALUE,
+        ) -> ::rsciter::bindings::SBOOL {
+            // SAFETY: Value has $[repr(transparent)]
+            let key = unsafe { &*(p_key as *const ::rsciter::Value) };
+            let value = unsafe { &*(p_value as *const ::rsciter::Value) };
+
+            let asset_ref = unsafe { &*(thing as *mut ::rsciter::som::AssetData<$type>) };
+            let Ok(_) = (&mut &&asset_ref.data).do_set_item(key, value) else {
+                return 0;
+            };
+
+            return 1;
+        }
+    };
+}
+
+pub use impl_item_getter;
+pub use impl_item_setter;
 
 pub trait IAsset<T: HasPassport>: Sized {
     fn obj(&self) -> AssetObj;
@@ -167,7 +253,7 @@ impl<T: HasPassport> IAsset<T> for GlobalAsset<T> {
         unsafe extern "C" fn asset_get_passport<T: HasPassport>(
             thing: *mut som_asset_t,
         ) -> *mut som_passport_t {
-            let this = thing as *mut GlobalInner<T>;
+            let this = thing as *mut AssetData<T>;
             let this = &*this;
             let Ok(passport) = this.data.passport() else {
                 return std::ptr::null_mut();
@@ -185,15 +271,15 @@ impl<T: HasPassport> IAsset<T> for GlobalAsset<T> {
 }
 
 #[repr(C)]
-struct GlobalInner<T> {
+pub struct AssetData<T> {
     _obj: AssetObj,
-    data: T,
+    pub data: T,
 }
 
 impl<T: HasPassport> GlobalAsset<T> {
     pub fn new(data: T) -> Result<Self> {
         let obj = AssetObj::new(Self::class());
-        let res = GlobalInner {
+        let res = AssetData {
             _obj: obj.clone(),
             data,
         };
