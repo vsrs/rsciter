@@ -7,7 +7,7 @@ mod debug;
 mod error;
 mod event_handler;
 mod options;
-mod som;
+pub mod som;
 pub mod utf;
 mod value;
 mod window;

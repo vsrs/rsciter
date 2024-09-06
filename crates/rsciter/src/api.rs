@@ -791,6 +791,14 @@ impl<'api> Api<'api> {
         call_method!(self, SciterAtomNameCB(atomv, rcv, rcv_param) as bool)
     }
 
+    pub fn set_global_asset(&self, pass: *mut som_asset_t) -> Result<bool> {
+        call_method!(self, SciterSetGlobalAsset(pass) as bool)
+    }
+
+    pub fn release_global_asset(&self, pass: *mut som_asset_t) -> Result<bool> {
+        call_method!(self, SciterReleaseGlobalAsset(pass) as bool)
+    }
+
     pub fn exec(&self, app_cmd: SCITER_APP_CMD, p1: UINT_PTR, p2: UINT_PTR) -> Result<INT_PTR> {
         let cmd = app_cmd as i32 as UINT;
         call_method!(self, SciterExec(cmd, p1, p2))

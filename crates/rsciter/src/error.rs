@@ -1,21 +1,21 @@
-use std::num::TryFromIntError;
+use std::{num::TryFromIntError, sync::Arc};
 
 use crate::api::{GraphinError, RequestError};
 
-#[derive(thiserror::Error, Debug)]
+#[derive(thiserror::Error, Debug, Clone)]
 pub enum Error {
     #[error("'{dll}' loading error: {message}")]
     Library {
         dll: String,
         message: String,
-        source: libloading::Error,
+        source: Arc<libloading::Error>,
     },
 
     #[error("No '{name}' exported: {message}")]
     Symbol {
         name: String,
         message: String,
-        source: libloading::Error,
+        source: Arc<libloading::Error>,
     },
 
     #[error("'{0}' API method unavailable")]
@@ -67,7 +67,7 @@ impl Error {
         Self::Library {
             dll: name.to_string(),
             message: Self::get_message(&err),
-            source: err,
+            source: Arc::new(err),
         }
     }
 
@@ -75,7 +75,7 @@ impl Error {
         Self::Symbol {
             name: name.to_string(),
             message: Self::get_message(&err),
-            source: err,
+            source: Arc::new(err),
         }
     }
 
@@ -87,7 +87,7 @@ impl Error {
     }
 }
 
-#[derive(thiserror::Error, Debug)]
+#[derive(thiserror::Error, Debug, Copy, Clone, PartialEq, Eq)]
 pub enum ValueError {
     #[error("Bad parameters")]
     BadParameters,

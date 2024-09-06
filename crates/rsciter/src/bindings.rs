@@ -10,7 +10,37 @@ mod generated {
     include!(concat!(env!("OUT_DIR"), "/generated.rs"));
 }
 
+use std::ffi::CStr;
+
 pub use generated::*;
+
+unsafe impl Sync for som_passport_t {}
+unsafe impl Send for som_passport_t {}
+impl som_passport_t {
+    pub fn new(name: impl AsRef<CStr>) -> crate::Result<Self> {
+        Ok(Self {
+            flags: 0,
+            name: crate::som::Atom::new(name)?.into(),
+
+            properties: std::ptr::null(),
+            n_properties: 0,
+
+            methods: std::ptr::null(),
+            n_methods: 0,
+
+            item_getter: Default::default(),
+            item_setter: Default::default(),
+            item_next: Default::default(),
+
+            prop_getter: Default::default(),
+            prop_setter: Default::default(),
+
+            name_resolver: Default::default(),
+
+            reserved: std::ptr::null_mut(),
+        })
+    }
+}
 
 // define _PTR types manually, as they depends on platform
 pub type INT_PTR = isize;
