@@ -766,16 +766,29 @@ impl<'api> Api<'api> {
         call_method!(self, SciterPostCallback(hwnd, wparam, lparam, timeoutms))
     }
 
-    pub fn request(&self) -> Result<RequestApi<'api>> {
+    pub fn graphics_api(&self) -> Result<GraphicsApi<'api>> {
+        call_method!(self, GetSciterGraphicsAPI as f, {
+            Ok(GraphicsApi::from(&*f()))
+        })
+    }
+
+    pub fn request_api(&self) -> Result<RequestApi<'api>> {
         call_method!(self, GetSciterRequestAPI as f, {
             Ok(RequestApi::from(&*f()))
         })
     }
 
-    pub fn graphics(&self) -> Result<GraphicsApi<'api>> {
-        call_method!(self, GetSciterGraphicsAPI as f, {
-            Ok(GraphicsApi::from(&*f()))
-        })
+    pub fn atom_value(&self, name: &std::ffi::CStr) -> Result<UINT64> {
+        call_method!(self, SciterAtomValue(name.as_ptr()))
+    }
+
+    pub fn atom_name_cb(
+        &self,
+        atomv: UINT64,
+        rcv: Option<unsafe extern "C" fn(arg1: LPCSTR, arg2: UINT, arg3: LPVOID)>,
+        rcv_param: LPVOID,
+    ) -> Result<bool> {
+        call_method!(self, SciterAtomNameCB(atomv, rcv, rcv_param) as bool)
     }
 
     pub fn exec(&self, app_cmd: SCITER_APP_CMD, p1: UINT_PTR, p2: UINT_PTR) -> Result<INT_PTR> {

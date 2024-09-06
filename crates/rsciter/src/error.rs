@@ -24,6 +24,9 @@ pub enum Error {
     #[error("'{0}' API method call failed")]
     ApiMethodFailed(&'static str),
 
+    #[error("Invalid atom value: '{0}'")]
+    InvalidAtom(crate::bindings::som_atom_t),
+
     #[error("Request error: '{0:?}'")]
     BadRequest(RequestError),
 
