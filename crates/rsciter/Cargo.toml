@@ -22,26 +22,21 @@ features = [
     "Win32_UI_WindowsAndMessaging"
 ]
 
+[target."cfg(windows)".dependencies.link_args]
+version = "0.6"
+optional = true
+
 [build-dependencies]
 bindgen = { version = "0.70", optional = true }
 
-# unfortunately this does not work
-# https://github.com/rust-lang/cargo/issues/1197
-#
-# [target.'cfg(not(target_os = "android"))'.features]
-# default = ["dynamic"]
-#
-# [target.'cfg(target_os = "android")'.features]
-# default = ["dynamic", "windowless"]
-
 [features]
-default = ["dynamic"]
+default = []
 
 # Generate new bindings at build-time instead of pre-generated code.
 codegen = ["bindgen"]
 
-# Use Sciter shared library
-dynamic = []
+# Use Sciter static library, requires `SCITER_LIB_FOLDER` env variable to be set.
+static = ["link_args"]
 
 # For Lite and Android
 windowless = []

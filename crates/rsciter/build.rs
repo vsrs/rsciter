@@ -17,6 +17,25 @@ fn main() {
         generate_bindings(&x_header, &generated_path);
     }
 
+    #[cfg(feature = "static")]
+    {
+        if let Ok(lib_dir) = std::env::var("SCITER_LIB_FOLDER") {
+            println!("cargo:rustc-link-search={lib_dir}");
+        } else {
+            println!("cargo:warning=SCITER_LIB_FOLDER is not set!");            
+        }
+        let lib_name_env = std::env::var("SCITER_LIB_NAME");
+        let lib_name = lib_name_env.as_deref().unwrap_or("sciter-static-release");
+
+        if lib_name_env.is_ok() {
+            println!("cargo:warning=SCITER_LIB_NAME: {lib_name}");
+        }
+
+        println!("cargo:rerun-if-env-changed=SCITER_LIB_NAME");
+        println!("cargo:rerun-if-env-changed=SCITER_LIB_FOLDER");
+        println!("cargo:rustc-link-lib={lib_name}");
+    }
+
     _ = out_dir; // to remove unused warning
 }
 

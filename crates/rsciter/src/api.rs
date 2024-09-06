@@ -10,7 +10,18 @@ pub use graphics::*;
 pub use request::*;
 
 cfg_if::cfg_if! {
-    if #[cfg(feature = "dynamic")] {
+    if #[cfg(feature = "static")] {
+        pub fn sapi() -> Result<Api<'static>> {
+            let api: &ISciterAPI = unsafe { &*SciterAPI() };
+
+            Ok(Api::from(api))
+        }
+
+        extern "C" {
+            pub fn SciterAPI() -> *const ISciterAPI;
+        }
+    }
+    else {
         pub fn sapi() -> Result<Api<'static>> {
             use std::sync::atomic::{AtomicPtr, Ordering};
 
@@ -43,18 +54,6 @@ cfg_if::cfg_if! {
 
                 Ok(api)
             }
-        }
-    }
-    else {
-        pub fn sapi() -> Result<Api<'static>> {
-            let api: &ISciterAPI = unsafe { &*SciterAPI() };
-
-            Ok(Api::from(api))
-        }
-
-        #[link(name = "sciter-static-release", kind="static")]
-        extern "C" {
-            pub fn SciterAPI() -> *const ISciterAPI;
         }
     }
 }

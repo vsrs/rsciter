@@ -24,6 +24,44 @@ pub type Result<T> = std::result::Result<T, Error>;
 // reexport macros
 pub use rsciter_macro::xmod;
 
+#[cfg(all(windows, feature = "static"))]
+mod link_static {
+    link_args::windows::raw!(unsafe "/alternatename:open=_open \
+/alternatename:close=_close \
+/alternatename:umask=_umask \
+/alternatename:wcsrev=_wcsrev \
+/alternatename:wcsdup=_wcsdup \
+/alternatename:strdup=_strdup \
+/alternatename:unlink=_unlink \
+/alternatename:fdopen=_fdopen \
+/alternatename:fileno=_fileno \
+/alternatename:isatty=_isatty \
+/alternatename:lseek=_lseek \
+/alternatename:read=_read \
+/alternatename:write=_write \
+/alternatename:rmdir=_rmdir \
+/alternatename:getcwd=_getcwd \
+/alternatename:chdir=_chdir \
+/alternatename:mkdir=_mkdir");
+
+    const fn sciter_lib_name() -> &'static str {
+        let Some(name) = option_env!("SCITER_LIB_NAME") else {
+            return "sciter-static-release";
+        };
+
+        name
+    }
+
+    link_args::windows::default_lib!(
+        sciter_lib_name(),
+        "Comdlg32",
+        "windowscodecs",
+        "Wininet",
+        "gdi32",
+        "Winspool"
+    );
+}
+
 #[cfg(test)]
 pub mod tests {
     use crate::api::{sapi, VersionKind};

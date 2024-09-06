@@ -58,7 +58,7 @@ pub enum Error {
     Unknown,
 }
 
-#[cfg_attr(not(feature = "dynamic"), allow(dead_code))]
+#[cfg_attr(feature = "static", allow(dead_code))]
 impl Error {
     pub(crate) fn library(name: &str, err: libloading::Error) -> Self {
         Self::Library {
