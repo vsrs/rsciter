@@ -1,10 +1,5 @@
 use std::{
-    ffi::CStr,
-    marker::PhantomData,
-    num::NonZero,
-    os::raw::{c_char, c_long, c_void},
-    ptr::NonNull,
-    slice, str,
+    ffi::CStr, marker::PhantomData, num::NonZero, ops::Deref, os::raw::{c_char, c_long, c_void}, ptr::NonNull, slice, str
 };
 
 use crate::{api::sapi, bindings::*, Result, Value};
@@ -103,8 +98,9 @@ impl AssetObj {
     // TODO: enumerate properties & methods, call methods
 }
 
+pub type Passport = crate::bindings::som_passport_t;
 pub trait HasPassport {
-    fn passport(&self) -> Result<&'static som_passport_t>;
+    fn passport(&self) -> Result<&'static Passport>;
 }
 
 pub trait ItemGetter: HasPassport {
@@ -221,6 +217,53 @@ macro_rules! impl_item_setter {
 pub use impl_item_getter;
 pub use impl_item_setter;
 
+pub type PropertyDef = crate::bindings::som_property_def_t;
+pub type PropertyAccessorDef = crate::bindings::som_property_def_t__bindgen_ty_1;
+pub type PropertyAccessors = crate::bindings::som_property_def_t__bindgen_ty_1__bindgen_ty_1;
+unsafe impl Sync for PropertyDef{}
+unsafe impl Send for PropertyDef{}
+
+#[macro_export]
+macro_rules! impl_ro_prop {
+    ($type:ident :: $name:ident) => {{
+        use ::rsciter::*;
+
+        unsafe extern "C" fn getter(
+            thing: *mut bindings::som_asset_t,
+            p_value: *mut bindings::SCITER_VALUE,
+        ) -> bindings::SBOOL {
+            let asset_ref = som::AssetRef::<$type>::new(thing);
+            let Ok(value) = conv::ToValue::to_value(&asset_ref.$name) else {
+                return 0;
+            };
+
+            *p_value = value.take();
+
+            1
+        }
+
+        som::PropertyDef {
+            type_: bindings::SOM_PROP_TYPE::SOM_PROP_ACCSESSOR.0 as _,
+            name: som::Atom::new(::rsciter_macro::cstr!($name))
+                .expect("Valid atom")
+                .into(),
+            u: som::PropertyAccessorDef {
+                accs: som::PropertyAccessors {
+                    getter: Some(getter),
+                    setter: None,
+                },
+            },
+        }
+    }};
+}
+pub use impl_ro_prop;
+
+pub trait Fields: HasPassport {
+    fn fields() -> &'static [PropertyDef] {
+        &[]
+    }
+}
+
 pub trait IAsset<T: HasPassport>: Sized {
     fn obj(&self) -> AssetObj;
     fn class() -> som_asset_class_t;
@@ -253,9 +296,8 @@ impl<T: HasPassport> IAsset<T> for GlobalAsset<T> {
         unsafe extern "C" fn asset_get_passport<T: HasPassport>(
             thing: *mut som_asset_t,
         ) -> *mut som_passport_t {
-            let this = thing as *mut AssetData<T>;
-            let this = &*this;
-            let Ok(passport) = this.data.passport() else {
+            let asset_ref = AssetRef::<T>::new(thing);
+            let Ok(passport) = asset_ref.passport() else {
                 return std::ptr::null_mut();
             };
             passport as *const _ as *mut _
@@ -274,6 +316,30 @@ impl<T: HasPassport> IAsset<T> for GlobalAsset<T> {
 pub struct AssetData<T> {
     _obj: AssetObj,
     pub data: T,
+}
+
+pub struct AssetRef<'a, T> {
+    this: &'a AssetData<T>,
+}
+
+impl<'a, T> AssetRef<'a, T> {
+    pub unsafe fn new(thing: *mut som_asset_t) -> Self {
+        let this = thing as *mut AssetData<T>;
+        let this = unsafe { &*this };
+        Self { this }
+    }
+
+    pub fn data(&self) -> &T {
+        &self.this.data
+    }
+}
+
+impl<T> Deref for AssetRef<'_, T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.data()
+    }
 }
 
 impl<T: HasPassport> GlobalAsset<T> {

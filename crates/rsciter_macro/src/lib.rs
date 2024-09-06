@@ -1,15 +1,27 @@
+use std::str::FromStr;
+
 use proc_macro::TokenStream;
-use proc_macro2::{Ident, TokenStream as TokenStream2};
+use proc_macro2::{Ident, Literal as Literal2, TokenStream as TokenStream2, TokenTree as TokenTree2};
 use proc_macro_error::proc_macro_error;
-use quote::quote;
+use quote::{quote, ToTokens};
 use syn::spanned::Spanned;
 
 pub(crate) mod items;
 pub(crate) mod sciter_mod;
 
-#[proc_macro_attribute]
-pub fn transparent(_attr: TokenStream, input: TokenStream) -> TokenStream {
-    input
+#[proc_macro_error]
+#[proc_macro]
+pub fn cstr(ts: TokenStream) -> TokenStream {
+    let ts = TokenStream2::from(ts);
+    let span = ts.span();
+    let mut iter = ts.into_iter();
+    let Some(TokenTree2::Ident(ident)) =  iter.next() else {
+        proc_macro_error::abort!(span, "Expected ident");
+    };
+
+    let data = format!("c\"{ident}\"");
+    let ts2 = Literal2::from_str(&data).unwrap().into_token_stream();
+    ts2.into()
 }
 
 #[proc_macro_error]

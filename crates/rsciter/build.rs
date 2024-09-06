@@ -62,7 +62,7 @@ fn generate_bindings(x_header: &Path, out_path: &Path) {
         .default_enum_style(EnumVariation::Rust {
             non_exhaustive: false,
         })
-        .newtype_enum("SCRIPT_RUNTIME_FEATURES|SOM_EVENTS|OUTPUT_.*|VALUE_.*|.*_FLAGS|.*_flags")
+        .newtype_enum("SCRIPT_RUNTIME_FEATURES|SOM_EVENTS|SOM_PROP_TYPE|OUTPUT_.*|VALUE_.*|.*_FLAGS|.*_flags")
         .bitfield_enum("EVENT_GROUPS")
         .allowlist_file(r".*sciter.*\.h")
         .allowlist_file(r".*value\.h")

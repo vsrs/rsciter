@@ -5,7 +5,7 @@ use super::*;
 pub const SCITER_VERSION_0: u32 = 5;
 pub const SCITER_VERSION_1: u32 = 0;
 pub const SCITER_VERSION_2: u32 = 3;
-pub const SCITER_VERSION_3: u32 = 14;
+pub const SCITER_VERSION_3: u32 = 15;
 pub const SCDOM_OK: u32 = 0;
 pub const SCDOM_INVALID_HWND: u32 = 1;
 pub const SCDOM_INVALID_HANDLE: u32 = 2;
@@ -1225,15 +1225,24 @@ pub type som_name_resolver_t = ::std::option::Option<
         pIsMethod: *mut SBOOL,
     ) -> SBOOL,
 >;
-#[repr(i32)]
-#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
-pub enum SOM_PROP_TYPE {
-    SOM_PROP_ACCSESSOR = 0,
-    SOM_PROP_INT32 = 1,
-    SOM_PROP_INT64 = 2,
-    SOM_PROP_FLOAT = 3,
-    SOM_PROP_STRING = 4,
+impl SOM_PROP_TYPE {
+    pub const SOM_PROP_ACCSESSOR: SOM_PROP_TYPE = SOM_PROP_TYPE(0);
 }
+impl SOM_PROP_TYPE {
+    pub const SOM_PROP_INT32: SOM_PROP_TYPE = SOM_PROP_TYPE(1);
+}
+impl SOM_PROP_TYPE {
+    pub const SOM_PROP_INT64: SOM_PROP_TYPE = SOM_PROP_TYPE(2);
+}
+impl SOM_PROP_TYPE {
+    pub const SOM_PROP_FLOAT: SOM_PROP_TYPE = SOM_PROP_TYPE(3);
+}
+impl SOM_PROP_TYPE {
+    pub const SOM_PROP_STRING: SOM_PROP_TYPE = SOM_PROP_TYPE(4);
+}
+#[repr(transparent)]
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
+pub struct SOM_PROP_TYPE(pub ::std::os::raw::c_int);
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct som_property_def_t {
