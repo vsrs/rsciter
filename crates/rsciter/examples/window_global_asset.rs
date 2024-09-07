@@ -1,4 +1,3 @@
-use bindings::*;
 use rsciter::*;
 use som::IAsset;
 
@@ -38,8 +37,8 @@ fn try_main() -> Result<i32> {
     let _console = setup_debug_output(|sub, sev, text| {
         eprintln!("Sub: {:?}, Level: {:?}, {text}", sub, sev);
     })?;
-
-	let object1 = IAsset::new(Person {name: String::from("Person A"), age: 40});
+    let mut object1 = Person {name: String::from("Person A"), age: 40};
+	let object1 = IAsset::new(&mut object1);
     let _ = som::into_global(object1);
 
     let window = Window::builder()

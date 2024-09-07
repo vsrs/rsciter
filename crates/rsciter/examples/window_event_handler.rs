@@ -69,4 +69,14 @@ impl EventHandler<'_> for Handler {
 
         Err(Error::ScriptingNoMethod(name.to_string()))
     }
+
+    fn attached(&'_ mut self, he: bindings::HELEMENT) {
+        let _ = he;
+        println!("Attached");
+    }
+
+    fn detached(&'_ mut self, he: bindings::HELEMENT) {
+        let _ = he;
+        println!("Dettached");
+    }
 }

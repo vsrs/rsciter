@@ -69,7 +69,7 @@ impl<T> IAssetRef<T> {
 impl<T> IAssetRef<T> {
 	/// Construct from a raw pointer, incrementing the reference count.
 	pub fn from_raw(asset: *mut som_asset_t) -> Self {
-		eprintln!("IAssetRef<{}>::from({:?})", std::any::type_name::<T>(), asset);
+		//eprintln!("IAssetRef<{}>::from({:?})", std::any::type_name::<T>(), asset);
 		assert!(!asset.is_null());
 		let me = Self {
 			asset,
@@ -209,9 +209,9 @@ impl<T: Passport> IAsset<T> {
 				let me = IAsset::<T>::from_raw(&thing);
 				me.refc.fetch_sub(1, Ordering::SeqCst) - 1
 			};
-			eprintln!("iasset<T>::release() -> {}", t);
+			//eprintln!("iasset<T>::release() -> {}", t);
 			if t == 0 {
-				eprintln!("iasset<T>::drop()");
+				//eprintln!("iasset<T>::drop()");
 				let me = unsafe { Box::from_raw(thing as *mut IAsset<T>) };
 				drop(me);
 			}

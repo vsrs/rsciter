@@ -4,7 +4,6 @@ use syn::{spanned::Spanned, Path, TypePath, Visibility};
 
 use super::items::MethodInfo;
 use crate::TokenStream2;
-
 pub struct SciterMod<'m> {
     vis: Option<&'m syn::Visibility>,
     prefix: TokenStream2,
@@ -80,13 +79,13 @@ impl<'m> SciterMod<'m> {
             let name = self.name_path();
             let call_impl = quote! {
                 unsafe extern "C" fn #call(
-                    thing: *mut som_asset_t,
-                    argc: UINT,
-                    argv: *const VALUE,
-                    p_result: *mut VALUE
-                ) -> SBOOL {
-                    let me = ::rsciter::som::IAsset::<#name>::from_raw(&thing);
-                    let args = ::rsciter::args_from_raw_parts(argv, argc);
+                    thing: *mut crate::bindings::som_asset_t,
+                    argc: crate::bindings::UINT,
+                    argv: *const crate::bindings::VALUE,
+                    p_result: *mut crate::bindings::VALUE
+                ) -> crate::bindings::SBOOL {
+                    let me = crate::som::IAsset::<#name>::from_raw(&thing);
+                    let args = crate::args_from_raw_parts(argv, argc);
                     #body
                 }
             };

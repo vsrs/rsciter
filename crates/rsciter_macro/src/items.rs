@@ -150,7 +150,7 @@ impl<'m> MethodInfo<'m> {
                             *p_result = Value::error_string(::rsciter::Error::ScriptingInvalidArgCount(#method_name .to_string()).to_string())
                                 .unwrap()
                                 .take();
-                            return true as SBOOL;
+                            return true as crate::bindings::SBOOL;
                         }
 
                         #(#convertions)*
@@ -175,7 +175,7 @@ impl<'m> MethodInfo<'m> {
                 let result = me.#method ( #args );
                 let result = ::rsciter::conv::ToValue::to_value(result).map(|res| res);
                 *p_result = result.unwrap().take();
-                return true as SBOOL;
+                return true as crate::bindings::SBOOL;
             }
         }
     }
