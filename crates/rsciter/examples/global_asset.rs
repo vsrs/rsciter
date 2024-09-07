@@ -54,8 +54,9 @@ impl som::ItemSetter for Person {
 }
 
 impl som::Fields for Person {
-    fn fields() -> &'static [som::PropertyDef] {
-        static FIELDS: std::sync::OnceLock<[som::PropertyDef; 2]> = std::sync::OnceLock::new();
+    fn fields() -> &'static [Result<som::PropertyDef>] {
+        static FIELDS: std::sync::OnceLock<[Result<som::PropertyDef>; 2]> =
+            std::sync::OnceLock::new();
 
         FIELDS.get_or_init(|| [som::impl_prop!(Person::age), som::impl_prop!(Person::name)])
     }
@@ -84,11 +85,14 @@ impl som::HasPassport for Person {
 
             let mut properties = Vec::with_capacity(fields.len());
             for f in fields {
-                properties.push(f.clone());
+                match f {
+                    Ok(v) => properties.push(v.clone()),
+                    Err(e) => return Err(e.clone()),
+                }
             }
             let boxed = properties.into_boxed_slice();
             passport.n_properties = boxed.len();
-            passport.properties = Box::into_raw(boxed) as *const _;
+            passport.properties = Box::into_raw(boxed) as *const _; // leak is acceptable here!
 
             Ok(passport)
         });

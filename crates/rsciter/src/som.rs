@@ -273,24 +273,24 @@ macro_rules! impl_prop {
             return 1;
         }
 
-        som::PropertyDef {
+        som::Atom::new(::rsciter_macro::cstr!($name)).map(|name| som::PropertyDef {
             type_: bindings::SOM_PROP_TYPE::SOM_PROP_ACCSESSOR.0 as _,
-            name: som::Atom::new(::rsciter_macro::cstr!($name))
-                .expect("Valid atom")
-                .into(),
+            name: name.into(),
             u: som::PropertyAccessorDef {
                 accs: som::PropertyAccessors {
                     getter: if $has_getter { Some(getter) } else { None },
                     setter: if $has_setter { Some(setter) } else { None },
                 },
             },
-        }
+        })
+
+
     }};
 }
 pub use impl_prop;
 
 pub trait Fields: HasPassport {
-    fn fields() -> &'static [PropertyDef] {
+    fn fields() -> &'static [Result<PropertyDef>] {
         &[]
     }
 }
