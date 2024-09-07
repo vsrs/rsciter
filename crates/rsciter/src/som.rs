@@ -327,16 +327,12 @@ pub use impl_prop;
 ///
 /// Note: The `get` and `set` attributes ignore visibility!
 pub trait Fields: HasPassport {
-    fn fields() -> &'static [Result<PropertyDef>] {
-        &[]
-    }
+    fn fields() -> &'static [Result<PropertyDef>];
 }
 
 /// See [Fields]. The traits are splitted only for codegen reasons.
 pub trait VirtualProperties: HasPassport {
-    fn properties() -> &'static [Result<PropertyDef>] {
-        &[]
-    }
+    fn properties() -> &'static [Result<PropertyDef>];
 }
 
 pub trait HasFields {
