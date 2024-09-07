@@ -270,7 +270,8 @@ macro_rules! impl_prop {
             else {
                 return 0;
             };
-            return 1;
+            
+            1
         }
 
         som::Atom::new(::rsciter_macro::cstr!($name)).map(|name| som::PropertyDef {

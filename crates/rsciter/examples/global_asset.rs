@@ -23,6 +23,9 @@ const HTML: &'static [u8] = br#"<html>
 
       Person.age = 13;
       console.log("new age: ", Person.age);
+
+      const formatted = Person.format();
+      console.log(`Formatted: "${formatted}"`);
     }
   </script>
 </head>
@@ -36,6 +39,12 @@ const HTML: &'static [u8] = br#"<html>
 pub struct Person {
     age: i32,
     name: String,
+}
+
+impl Person {
+    pub fn format(&self) -> String {
+        format!("{} of {}", &self.name, self.age)
+    }
 }
 
 impl som::ItemGetter for Person {
@@ -66,6 +75,45 @@ impl som::HasPassport for Person {
     fn passport(&self) -> Result<&'static som::Passport> {
         let passport = som::impl_passport!(self, Person);
         passport
+    }
+}
+
+impl som::Methods for Person {
+    fn methods() -> &'static [Result<som::MethodDef>] {
+        static METHODS: std::sync::OnceLock<[Result<som::MethodDef>; 1]> =
+            std::sync::OnceLock::new();
+        METHODS.get_or_init(|| {
+            [{
+                use ::rsciter::*;
+
+                unsafe extern "C" fn method_thunk(
+                    thing: *mut bindings::som_asset_t,
+                    argc: bindings::UINT,
+                    argv: *const bindings::SCITER_VALUE,
+                    p_result: *mut bindings::SCITER_VALUE,
+                ) -> bindings::SBOOL {
+                    let _args = ::rsciter::args_from_raw_parts(argv, argc);
+                    let asset_mut = som::AssetRefMut::<Person>::new(thing);
+
+                    let res = asset_mut.format();
+
+                    let Ok(value) = conv::ToValue::to_value(res) else {
+                        return 0;
+                    };
+
+                    *p_result = value.take();
+
+                    1
+                }
+
+                som::Atom::new(c"format").map(|name| som::MethodDef {
+                    reserved: std::ptr::null_mut(),
+                    name: name.into(),
+                    params: 0,
+                    func: Some(method_thunk),
+                })
+            }]
+        })
     }
 }
 
