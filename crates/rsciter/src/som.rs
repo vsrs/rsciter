@@ -289,9 +289,85 @@ macro_rules! impl_prop {
 }
 pub use impl_prop;
 
+/// There may be two property sources:
+///
+/// 1) Struct fields (handled via the [Fields] trait):
+/// ```rust,ignore
+/// #[rsciter::asset]
+/// struct Asset {
+///     name: String,
+///     id: u32,
+/// }
+/// ```
+///
+/// 2) Virtual properties in `impl` blocks (handled via the [VirtualProperties] trait):
+/// ```rust,ignore
+/// #[rsciter::asset]
+/// impl Asset {
+///     #[get]
+///     pub fn year(&self) -> String { ... }
+///     #[set]
+///     pub fn set_year(&self) -> String { ... }
+/// }
+/// ```
+/// `property_name` and `set_property_name` patterns are handled automatically and bound to the same `property_name`.
+/// Note: All public methods without `get` or `set` attributes are exported as functions.
+///
+/// Alternative syntax with explicit `year` name:
+/// ```rust,ignore
+/// #[rsciter::asset]
+/// impl Asset {
+///     #[get(year)]
+///     fn any_get_year_name(&self) -> String { ... }
+///
+///     #[set(year)]
+///     fn any_set_year_name(&self) -> String { ... }
+/// }
+/// ```
+///
+/// Note: The `get` and `set` attributes ignore visibility!
 pub trait Fields: HasPassport {
     fn fields() -> &'static [Result<PropertyDef>] {
         &[]
+    }
+}
+
+/// See [Fields]. The traits are splitted only for codegen reasons.
+pub trait VirtualProperties: HasPassport {
+    fn properties() -> &'static [Result<PropertyDef>] {
+        &[]
+    }
+}
+
+pub trait HasFields {
+    fn enum_fields(&self) -> &'static [Result<PropertyDef>];
+}
+
+impl<T> HasFields for &&T {
+    fn enum_fields(&self) -> &'static [Result<PropertyDef>] {
+        &[]
+    }
+}
+
+impl<T: Fields> HasFields for &mut &&T {
+    fn enum_fields(&self) -> &'static [Result<PropertyDef>] {
+        T::fields()
+    }
+}
+
+pub trait HasVirtualProperties {
+    fn enum_properties(&self) -> &'static [Result<PropertyDef>];
+}
+
+impl<T> HasVirtualProperties for &&T {
+    fn enum_properties(&self) -> &'static [Result<PropertyDef>] {
+        &[]
+    }
+}
+
+impl<T: VirtualProperties> HasVirtualProperties for &mut &&T {
+    fn enum_properties(&self) -> &'static [Result<PropertyDef>] {
+        T::properties()
     }
 }
 
@@ -315,6 +391,7 @@ impl<T: HasPassport> IAsset<T> for GlobalAsset<T> {
             _name: *const c_char,
             _out: *mut *mut c_void,
         ) -> c_long {
+            // TODO: query interface (any usage?)
             return 0;
         }
 
@@ -369,6 +446,61 @@ impl<T: HasPassport> GlobalAsset<T> {
         unsafe { AssetRef::new(ptr) }
     }
 }
+
+#[macro_export]
+macro_rules! impl_passport {
+    ($self:ident, $type:ident) => {{
+        static PASSPORT: std::sync::OnceLock<Result<bindings::som_passport_t>> =
+            std::sync::OnceLock::new();
+
+        let res = PASSPORT.get_or_init(|| {
+            let mut passport =
+                ::rsciter::bindings::som_passport_t::new(::rsciter_macro::cstr!($type))?;
+            use ::rsciter::som::{
+                self, HasFields, HasItemGetter, HasItemSetter, HasVirtualProperties,
+            };
+
+            let autoref_trick = &mut &$self;
+
+            if autoref_trick.has_item_getter() {
+                som::impl_item_getter!($type);
+                passport.item_getter = Some(item_getter);
+            }
+
+            if autoref_trick.has_item_setter() {
+                som::impl_item_setter!($type);
+                passport.item_setter = Some(item_setter);
+            }
+
+            let mut properties = Vec::new();
+            for f in autoref_trick.enum_fields() {
+                match f {
+                    Ok(v) => properties.push(v.clone()),
+                    Err(e) => return Err(e.clone()),
+                }
+            }
+
+            for p in autoref_trick.enum_properties() {
+                match p {
+                    Ok(v) => properties.push(v.clone()),
+                    Err(e) => return Err(e.clone()),
+                }
+            }
+
+            let boxed = properties.into_boxed_slice();
+            passport.n_properties = boxed.len();
+            passport.properties = Box::into_raw(boxed) as *const _; // leak is acceptable here!
+
+            Ok(passport)
+        });
+
+        match res {
+            Ok(p) => Ok(p),
+            Err(e) => Err(e.clone()),
+        }
+    }};
+}
+pub use impl_passport;
 
 #[repr(C)]
 struct AssetData<T> {

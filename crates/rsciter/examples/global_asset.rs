@@ -64,43 +64,8 @@ impl som::Fields for Person {
 
 impl som::HasPassport for Person {
     fn passport(&self) -> Result<&'static som::Passport> {
-        static PASSPORT: std::sync::OnceLock<Result<bindings::som_passport_t>> =
-            std::sync::OnceLock::new();
-
-        let res = PASSPORT.get_or_init(|| {
-            let mut passport = bindings::som_passport_t::new(c"Person")?;
-            use som::{Fields, HasItemGetter, HasItemSetter};
-
-            if (&mut &self).has_item_getter() {
-                som::impl_item_getter!(Person);
-                passport.item_getter = Some(item_getter);
-            }
-
-            if (&mut &self).has_item_setter() {
-                som::impl_item_setter!(Person);
-                passport.item_setter = Some(item_setter);
-            }
-
-            let fields = <Person as Fields>::fields();
-
-            let mut properties = Vec::with_capacity(fields.len());
-            for f in fields {
-                match f {
-                    Ok(v) => properties.push(v.clone()),
-                    Err(e) => return Err(e.clone()),
-                }
-            }
-            let boxed = properties.into_boxed_slice();
-            passport.n_properties = boxed.len();
-            passport.properties = Box::into_raw(boxed) as *const _; // leak is acceptable here!
-
-            Ok(passport)
-        });
-
-        match res {
-            Ok(p) => Ok(p),
-            Err(e) => Err(e.clone()),
-        }
+        let passport = som::impl_passport!(self, Person);
+        passport
     }
 }
 
