@@ -220,18 +220,18 @@ pub(super) unsafe extern "C" fn element_proc_thunk(
                         Ok(Some(ret_val)) => {
                             params.result = ret_val.take();
                             return true as _;
-                        },
+                        }
                         Ok(None) => {
                             return true as _;
                         }
-                        Err(crate::error::Error::ScriptingNoMethod(_)) => { /* return false */},
+                        Err(crate::error::Error::ScriptingNoMethod(_)) => { /* return false */ }
                         Err(err) => {
                             if let Ok(err) = Value::error_string(&err.to_string()) {
                                 params.result = err.take();
-                                return true as _;    
+                                return true as _;
                             }
                             // TODO: fallback to a preallocated error???
-                        },
+                        }
                     }
                 }
 

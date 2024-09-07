@@ -103,7 +103,8 @@ impl ToValue for &str {
     }
 }
 
-impl ToValue for &&str { // for array items
+impl ToValue for &&str {
+    // for array items
     fn to_value(val: Self) -> Result<Value> {
         Value::string(*val)
     }

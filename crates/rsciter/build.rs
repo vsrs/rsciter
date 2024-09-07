@@ -22,7 +22,7 @@ fn main() {
         if let Ok(lib_dir) = std::env::var("SCITER_LIB_FOLDER") {
             println!("cargo:rustc-link-search={lib_dir}");
         } else {
-            println!("cargo:warning=SCITER_LIB_FOLDER is not set!");            
+            println!("cargo:warning=SCITER_LIB_FOLDER is not set!");
         }
         let lib_name_env = std::env::var("SCITER_LIB_NAME");
         let lib_name = lib_name_env.as_deref().unwrap_or("sciter-static-release");
@@ -55,14 +55,16 @@ fn lookup_x_header() -> std::path::PathBuf {
 #[cfg(feature = "codegen")]
 fn generate_bindings(x_header: &Path, out_path: &Path) {
     use bindgen::*;
-    use std::io::{Write, BufReader, BufWriter, BufRead};
+    use std::io::{BufRead, BufReader, BufWriter, Write};
 
     let bindings = Builder::default()
         .header(x_header.to_string_lossy())
         .default_enum_style(EnumVariation::Rust {
             non_exhaustive: false,
         })
-        .newtype_enum("SCRIPT_RUNTIME_FEATURES|SOM_EVENTS|SOM_PROP_TYPE|OUTPUT_.*|VALUE_.*|.*_FLAGS|.*_flags")
+        .newtype_enum(
+            "SCRIPT_RUNTIME_FEATURES|SOM_EVENTS|SOM_PROP_TYPE|OUTPUT_.*|VALUE_.*|.*_FLAGS|.*_flags",
+        )
         .bitfield_enum("EVENT_GROUPS")
         .allowlist_file(r".*sciter.*\.h")
         .allowlist_file(r".*value\.h")

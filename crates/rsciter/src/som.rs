@@ -1,5 +1,10 @@
 use std::{
-    ffi::CStr, marker::PhantomData, num::NonZero, ops::Deref, os::raw::{c_char, c_long, c_void}, ptr::NonNull, slice, str
+    ffi::CStr,
+    num::NonZero,
+    ops::{Deref, DerefMut},
+    os::raw::{c_char, c_long, c_void},
+    ptr::NonNull,
+    slice, str,
 };
 
 use crate::{api::sapi, bindings::*, Result, Value};
@@ -63,7 +68,7 @@ impl Drop for AssetObj {
 impl AssetObj {
     pub(crate) fn new(class_data: som_asset_class_t) -> Self {
         let isa = Box::new(class_data);
-        Self(unsafe { NonNull::new_unchecked(Box::leak(isa)) })
+        Self(unsafe { NonNull::new_unchecked(Box::into_raw(isa)) })
     }
 
     pub(crate) fn add_ref(&self) -> c_long {
@@ -170,20 +175,18 @@ macro_rules! impl_item_getter {
         impl_item_getter!($type, item_getter)
     };
     ($type:ty, $name:ident) => {
-        extern "C" fn $name(
+        unsafe extern "C" fn $name(
             thing: *mut ::rsciter::bindings::som_asset_t,
             p_key: *const ::rsciter::bindings::SCITER_VALUE,
             p_value: *mut ::rsciter::bindings::SCITER_VALUE,
         ) -> ::rsciter::bindings::SBOOL {
-            // SAFETY: Value has $[repr(transparent)]
-            let key = unsafe { &*(p_key as *const ::rsciter::Value) };
-
-            let asset_ref = unsafe { &*(thing as *mut ::rsciter::som::AssetData<$type>) };
-            let Ok(Some(res)) = (&mut &&asset_ref.data).do_get_item(key) else {
+            let key = p_key.as_value_ref();
+            let asset_ref = ::rsciter::som::AssetRef::<$type>::new(thing);
+            let Ok(Some(res)) = (&mut &asset_ref.data()).do_get_item(key) else {
                 return 0;
             };
 
-            unsafe { *p_value = res.take() };
+            *p_value = res.take();
             return 1;
         }
     };
@@ -195,17 +198,15 @@ macro_rules! impl_item_setter {
         impl_item_setter!($type, item_setter)
     };
     ($type:ty, $name:ident) => {
-        extern "C" fn $name(
+        unsafe extern "C" fn $name(
             thing: *mut ::rsciter::bindings::som_asset_t,
             p_key: *const ::rsciter::bindings::SCITER_VALUE,
             p_value: *const ::rsciter::bindings::SCITER_VALUE,
         ) -> ::rsciter::bindings::SBOOL {
-            // SAFETY: Value has $[repr(transparent)]
-            let key = unsafe { &*(p_key as *const ::rsciter::Value) };
-            let value = unsafe { &*(p_value as *const ::rsciter::Value) };
-
-            let asset_ref = unsafe { &*(thing as *mut ::rsciter::som::AssetData<$type>) };
-            let Ok(_) = (&mut &&asset_ref.data).do_set_item(key, value) else {
+            let key = p_key.as_value_ref();
+            let value = p_value.as_value_ref();
+            let asset_ref = ::rsciter::som::AssetRef::<$type>::new(thing);
+            let Ok(_) = (&mut &asset_ref.data()).do_set_item(key, value) else {
                 return 0;
             };
 
@@ -220,12 +221,28 @@ pub use impl_item_setter;
 pub type PropertyDef = crate::bindings::som_property_def_t;
 pub type PropertyAccessorDef = crate::bindings::som_property_def_t__bindgen_ty_1;
 pub type PropertyAccessors = crate::bindings::som_property_def_t__bindgen_ty_1__bindgen_ty_1;
-unsafe impl Sync for PropertyDef{}
-unsafe impl Send for PropertyDef{}
+unsafe impl Sync for PropertyDef {}
+unsafe impl Send for PropertyDef {}
 
 #[macro_export]
-macro_rules! impl_ro_prop {
-    ($type:ident :: $name:ident) => {{
+macro_rules! impl_prop {
+    ($type:ident :: $name:ident) => {
+        impl_prop!($type :: $name : true true)
+    };
+    ($type:ident :: $name:ident get) => {
+        impl_prop!($type :: $name : true false)
+    };
+    ($type:ident :: $name:ident set) => {
+        impl_prop!($type :: $name : false true)
+    };
+    ($type:ident :: $name:ident get set) => {
+        impl_prop!($type :: $name : true true)
+    };
+    ($type:ident :: $name:ident set get) => {
+        impl_prop!($type :: $name : true true)
+    };
+
+    ($type:ident :: $name:ident : $has_getter:literal $has_setter:literal) => {{
         use ::rsciter::*;
 
         unsafe extern "C" fn getter(
@@ -242,6 +259,20 @@ macro_rules! impl_ro_prop {
             1
         }
 
+        unsafe extern "C" fn setter(
+            thing: *mut bindings::som_asset_t,
+            p_value: *mut bindings::SCITER_VALUE,
+        ) -> bindings::SBOOL {
+            let mut asset_mut = som::AssetRefMut::<$type>::new(thing);
+            let value = p_value.as_value_ref();
+            let Ok(_) = ::rsciter::conv::FromValue::from_value(value)
+                .map(|v| asset_mut.age = v)
+            else {
+                return 0;
+            };
+            return 1;
+        }
+
         som::PropertyDef {
             type_: bindings::SOM_PROP_TYPE::SOM_PROP_ACCSESSOR.0 as _,
             name: som::Atom::new(::rsciter_macro::cstr!($name))
@@ -249,14 +280,14 @@ macro_rules! impl_ro_prop {
                 .into(),
             u: som::PropertyAccessorDef {
                 accs: som::PropertyAccessors {
-                    getter: Some(getter),
-                    setter: None,
+                    getter: if $has_getter { Some(getter) } else { None },
+                    setter: if $has_setter { Some(setter) } else { None },
                 },
             },
         }
     }};
 }
-pub use impl_ro_prop;
+pub use impl_prop;
 
 pub trait Fields: HasPassport {
     fn fields() -> &'static [PropertyDef] {
@@ -265,20 +296,14 @@ pub trait Fields: HasPassport {
 }
 
 pub trait IAsset<T: HasPassport>: Sized {
-    fn obj(&self) -> AssetObj;
     fn class() -> som_asset_class_t;
 }
 
 pub struct GlobalAsset<T: HasPassport> {
-    obj: AssetObj,
-    _t: PhantomData<T>,
+    ptr: *mut AssetData<T>,
 }
 
 impl<T: HasPassport> IAsset<T> for GlobalAsset<T> {
-    fn obj(&self) -> AssetObj {
-        self.obj.clone()
-    }
-
     fn class() -> som_asset_class_t {
         // global assets are not ref-counted.
         unsafe extern "C" fn ref_count_stub(_thing: *mut som_asset_t) -> c_long {
@@ -314,7 +339,7 @@ impl<T: HasPassport> IAsset<T> for GlobalAsset<T> {
 
 impl<T: HasPassport> Drop for GlobalAsset<T> {
     fn drop(&mut self) {
-        let ptr = &self.obj as *const _ as *const som_asset_t as *mut _;
+        let ptr: *mut som_asset_t = self.ptr.cast();
         let _res = sapi().and_then(|api| api.release_global_asset(ptr));
         debug_assert!(_res.is_ok());
     }
@@ -336,15 +361,17 @@ impl<T: HasPassport> GlobalAsset<T> {
         let _res = sapi()?.set_global_asset(ptr as _)?;
         debug_assert!(_res);
 
-        Ok(Self {
-            obj,
-            _t: PhantomData,
-        })
+        Ok(Self { ptr })
+    }
+
+    pub fn as_ref(&self) -> AssetRef<T> {
+        let ptr: *const som_asset_t = self.ptr.cast();
+        unsafe { AssetRef::new(ptr) }
     }
 }
 
 #[repr(C)]
-pub struct AssetData<T> {
+struct AssetData<T> {
     _obj: AssetObj,
     pub data: T,
 }
@@ -354,8 +381,8 @@ pub struct AssetRef<'a, T> {
 }
 
 impl<'a, T> AssetRef<'a, T> {
-    pub unsafe fn new(thing: *mut som_asset_t) -> Self {
-        let this = thing as *mut AssetData<T>;
+    pub unsafe fn new(thing: *const som_asset_t) -> Self {
+        let this = thing as *const AssetData<T>;
         let this = unsafe { &*this };
         Self { this }
     }
@@ -370,6 +397,40 @@ impl<T> Deref for AssetRef<'_, T> {
 
     fn deref(&self) -> &Self::Target {
         &self.data()
+    }
+}
+
+pub struct AssetRefMut<'a, T> {
+    this: &'a mut AssetData<T>,
+}
+
+impl<'a, T> AssetRefMut<'a, T> {
+    pub unsafe fn new(thing: *mut som_asset_t) -> Self {
+        let this = thing as *mut AssetData<T>;
+        let this = unsafe { &mut *this };
+        Self { this }
+    }
+
+    pub fn data(&self) -> &T {
+        &self.this.data
+    }
+
+    pub fn data_mut(&mut self) -> &mut T {
+        &mut self.this.data
+    }
+}
+
+impl<T> Deref for AssetRefMut<'_, T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.data()
+    }
+}
+
+impl<T> DerefMut for AssetRefMut<'_, T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.data_mut()
     }
 }
 

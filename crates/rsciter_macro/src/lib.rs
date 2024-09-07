@@ -1,7 +1,9 @@
 use std::str::FromStr;
 
 use proc_macro::TokenStream;
-use proc_macro2::{Ident, Literal as Literal2, TokenStream as TokenStream2, TokenTree as TokenTree2};
+use proc_macro2::{
+    Ident, Literal as Literal2, TokenStream as TokenStream2, TokenTree as TokenTree2,
+};
 use proc_macro_error::proc_macro_error;
 use quote::{quote, ToTokens};
 use syn::spanned::Spanned;
@@ -15,7 +17,7 @@ pub fn cstr(ts: TokenStream) -> TokenStream {
     let ts = TokenStream2::from(ts);
     let span = ts.span();
     let mut iter = ts.into_iter();
-    let Some(TokenTree2::Ident(ident)) =  iter.next() else {
+    let Some(TokenTree2::Ident(ident)) = iter.next() else {
         proc_macro_error::abort!(span, "Expected ident");
     };
 
@@ -34,7 +36,7 @@ pub fn xmod(attr: TokenStream, input: TokenStream) -> TokenStream {
             let span = e.span();
             let message = format!("{e}");
             proc_macro_error::abort!(span, message);
-        }        
+        }
     }
 }
 

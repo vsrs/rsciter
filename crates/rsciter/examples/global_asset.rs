@@ -20,6 +20,9 @@ const HTML: &'static [u8] = br#"<html>
 
       Person.test = 4;
       console.log(Person.test);
+
+      Person.age = 13;
+      console.log("new age: ", Person.age);
     }
   </script>
 </head>
@@ -29,7 +32,7 @@ const HTML: &'static [u8] = br#"<html>
 
 </html>"#;
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Person {
     age: i32,
     name: String,
@@ -54,10 +57,7 @@ impl som::Fields for Person {
     fn fields() -> &'static [som::PropertyDef] {
         static FIELDS: std::sync::OnceLock<[som::PropertyDef; 2]> = std::sync::OnceLock::new();
 
-        FIELDS.get_or_init(|| [
-            som::impl_ro_prop!(Person::age),
-            som::impl_ro_prop!(Person::name)
-        ])
+        FIELDS.get_or_init(|| [som::impl_prop!(Person::age), som::impl_prop!(Person::name)])
     }
 }
 
@@ -116,6 +116,9 @@ fn try_main() -> Result<i32> {
     window.show(Visibility::Normal)?;
 
     let _exit_code = app::run()?;
+
+    let new_age = person_asset.as_ref().age;
+    println!("New age: {new_age}");
 
     // try to comment and see output
     drop(person_asset);

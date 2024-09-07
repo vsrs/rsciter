@@ -537,8 +537,8 @@ unsafe extern "C" fn enum_elements_thunk(
     value: *const VALUE,
 ) -> SBOOL {
     let state = &*(param as *const EnumerateState);
-    let key = &*(key as *const Value); // Value is repr(transparent)
-    let value = &*(value as *const Value);
+    let key = key.as_value_ref();
+    let value = value.as_value_ref();
 
     let res = (state.callback)(key, value);
 
@@ -609,7 +609,7 @@ pub(crate) fn args_from_raw_parts<'a>(argv: *const VALUE, argc: u32) -> &'a [Val
         return &[];
     }
 
-    let argv = argv as *const Value; // Value has $[repr(transparent)]
+    let argv = argv as *const Value;
     let slice = unsafe { std::slice::from_raw_parts(argv, argc as usize) };
     slice
 }
@@ -619,9 +619,37 @@ pub(crate) fn args_as_raw_slice(args: &[Value]) -> &[VALUE] {
         return &[];
     }
 
-    let ptr = args.as_ptr() as *const VALUE; // Value has $[repr(transparent)]
+    let ptr = args.as_ptr() as *const VALUE;
     let slice = unsafe { std::slice::from_raw_parts(ptr, args.len()) };
     slice
+}
+
+pub unsafe trait AsValueRef {
+    unsafe fn as_value_ref(&self) -> &Value;
+}
+
+pub unsafe trait AsValueMut {
+    unsafe fn as_value_mut(&mut self) -> &mut Value;
+}
+
+unsafe impl AsValueRef for *const VALUE {
+    unsafe fn as_value_ref(&self) -> &Value {
+        // SAFETY: Value has $[repr(transparent)]
+        unsafe { &*(*self as *const Value) }
+    }
+}
+
+unsafe impl AsValueRef for *mut VALUE {
+    unsafe fn as_value_ref(&self) -> &Value {
+        // SAFETY: Value has $[repr(transparent)]
+        unsafe { &*(*self as *const Value) }
+    }
+}
+
+unsafe impl AsValueMut for *mut VALUE {
+    unsafe fn as_value_mut(&mut self) -> &mut Value {
+        unsafe { &mut *(*self as *mut Value) }
+    }
 }
 
 #[cfg(test)]
