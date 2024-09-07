@@ -35,8 +35,7 @@ pub fn run() -> Result<i32> {
 
 /// Should be called in the thread where [run](run) works
 pub fn request_quit(code: i32) -> Result<bool> {
-    let _ = code; // TODO: p1 or p2?
-    let res = sapi()?.exec(SCITER_APP_CMD::SCITER_APP_STOP, 0, 0)?;
+    let res = sapi()?.exec(SCITER_APP_CMD::SCITER_APP_STOP, code as _, 0)?;
     Ok(res == 0)
 }
 
