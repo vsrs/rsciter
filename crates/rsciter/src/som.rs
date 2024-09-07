@@ -367,6 +367,29 @@ impl<T: VirtualProperties> HasVirtualProperties for &mut &&T {
     }
 }
 
+pub type MethodDef = som_method_def_t;
+unsafe impl Send for MethodDef {}
+unsafe impl Sync for MethodDef {}
+pub trait Methods: HasPassport {
+    fn methods() -> &'static [Result<MethodDef>];
+}
+
+pub trait HasMethods {
+    fn enum_methods(&self) -> &'static [Result<MethodDef>];
+}
+
+impl<T> HasMethods for &&T {
+    fn enum_methods(&self) -> &'static [Result<MethodDef>] {
+        &[]
+    }
+}
+
+impl<T: Methods> HasMethods for &mut &&T {
+    fn enum_methods(&self) -> &'static [Result<MethodDef>] {
+        T::methods()
+    }
+}
+
 pub trait IAsset<T: HasPassport>: Sized {
     fn class() -> som_asset_class_t;
 }
@@ -453,7 +476,7 @@ macro_rules! impl_passport {
             let mut passport =
                 ::rsciter::bindings::som_passport_t::new(::rsciter_macro::cstr!($type))?;
             use ::rsciter::som::{
-                self, HasFields, HasItemGetter, HasItemSetter, HasVirtualProperties,
+                self, HasFields, HasItemGetter, HasItemSetter, HasMethods, HasVirtualProperties,
             };
 
             let autoref_trick = &mut &$self;
@@ -475,7 +498,6 @@ macro_rules! impl_passport {
                     Err(e) => return Err(e.clone()),
                 }
             }
-
             for p in autoref_trick.enum_properties() {
                 match p {
                     Ok(v) => properties.push(v.clone()),
@@ -483,9 +505,25 @@ macro_rules! impl_passport {
                 }
             }
 
-            let boxed = properties.into_boxed_slice();
-            passport.n_properties = boxed.len();
-            passport.properties = Box::into_raw(boxed) as *const _; // leak is acceptable here!
+            let mut methods = Vec::new();
+            for m in autoref_trick.enum_methods() {
+                match m {
+                    Ok(v) => methods.push(v.clone()),
+                    Err(e) => return Err(e.clone()),
+                }
+            }
+
+            let boxed_props = properties.into_boxed_slice();
+            passport.n_properties = boxed_props.len();
+            if passport.n_properties > 0 {
+                passport.properties = Box::into_raw(boxed_props) as *const _; // leak is acceptable here!
+            }
+
+            let boxed_methods = methods.into_boxed_slice();
+            passport.n_methods = boxed_methods.len();
+            if passport.n_methods > 0 {
+                passport.methods = Box::into_raw(boxed_methods) as *const _; // leak is acceptable here!
+            }
 
             Ok(passport)
         });
