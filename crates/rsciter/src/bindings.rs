@@ -100,9 +100,11 @@ cfg_if::cfg_if! {
         #[repr(transparent)]
         pub struct LRESULT(pub isize);
 
-        // just to make rustc happy:
-        pub struct MSG;
-        pub struct IUnknown;
+        // the structs are not used, so just have dummy fields to make ISciterAPI FFI-safe
+        #[repr(C)]
+        pub struct MSG(usize);
+        #[repr(C)]
+        pub struct IUnknown(usize);
 
         cfg_if::cfg_if! {
             if #[cfg(any(target_os="android", target_os="linux"))] {
