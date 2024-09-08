@@ -17,23 +17,23 @@ enum Arg<'m> {
 }
 
 impl<'m> MethodInfo<'m> {
-    pub fn new(signature: &'m syn::Signature) -> syn::Result<Self> {
+    pub fn new(signature: &'m syn::Signature, err_src: &str) -> syn::Result<Self> {
         let call_ident = quote::format_ident!("call_{}", &signature.ident);
 
         if signature.generics.lt_token.is_some() {
             return Err(syn::Error::new(
                 signature.generics.span(),
-                "#[rsciter::xmod] Generic functions are not supported!",
+                format!("#[rsciter::{err_src}] Generic functions are not supported!"),
             ));
         }
         if signature.variadic.is_some() {
             return Err(syn::Error::new(
                 signature.generics.span(),
-                "#[rsciter::xmod] Variadic functions are not supported!",
+                format!("#[rsciter::{err_src}] Variadic functions are not supported!"),
             ));
         }
 
-        let args = Self::get_args(signature)?;
+        let args = Self::get_args(signature, err_src)?;
         Ok(Self {
             sig: signature,
             call_ident,
@@ -110,7 +110,7 @@ impl<'m> MethodInfo<'m> {
         }
     }
 
-    fn get_args(sig: &Signature) -> syn::Result<Vec<Arg>> {
+    fn get_args<'a>(sig: &'a Signature, err_src: &str) -> syn::Result<Vec<Arg<'a>>> {
         let mut res = Vec::new();
         for arg in sig.inputs.iter() {
             match arg {
@@ -122,7 +122,7 @@ impl<'m> MethodInfo<'m> {
                         Type::Reference(reference) if reference.mutability.is_some() => {
                             return Err(syn::Error::new(
                                 reference.span(),
-                                "#[rsciter::xmod] mutable references in function parameters are not supported!",
+                                format!("#[rsciter::{err_src}] mutable references in function parameters are not supported!"),
                             ))
                         },
                         _ => (),
@@ -133,7 +133,7 @@ impl<'m> MethodInfo<'m> {
                         it => {
                             return Err(syn::Error::new(
                                 it.span(),
-                                "#[rsciter::xmod] Only simple parameter variable bindings are supported!",
+                                format!("#[rsciter::{err_src}] Only simple parameter variable bindings are supported!"),
                             ))
                         }
                     };

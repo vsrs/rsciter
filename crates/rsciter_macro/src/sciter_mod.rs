@@ -13,6 +13,8 @@ pub struct SciterMod<'m> {
 }
 
 impl<'m> SciterMod<'m> {
+    const ERR_SRC: &'static str = "xmod";
+
     pub fn from_mod(module: &'m syn::ItemMod, name: String) -> syn::Result<Self> {
         let methods = Self::get_mod_methods(module)?;
 
@@ -75,7 +77,7 @@ impl<'m> SciterMod<'m> {
             for item in items {
                 match item {
                     syn::Item::Fn(fn_item) if matches!(fn_item.vis, Visibility::Public(_)) => {
-                        let info = MethodInfo::new(&fn_item.sig)?;
+                        let info = MethodInfo::new(&fn_item.sig, Self::ERR_SRC)?;
                         res.push(info);
                     }
                     _ => (),
@@ -91,7 +93,7 @@ impl<'m> SciterMod<'m> {
         for it in &impl_block.items {
             match it {
                 syn::ImplItem::Fn(m) if matches!(m.vis, Visibility::Public(_)) => {
-                    let info = MethodInfo::new(&m.sig)?;
+                    let info = MethodInfo::new(&m.sig, Self::ERR_SRC)?;
                     methods.push(info);
                 }
                 _ => (),
