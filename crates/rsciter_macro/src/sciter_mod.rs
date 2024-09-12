@@ -67,10 +67,19 @@ impl<'m> SciterMod<'m> {
         self.vis.unwrap_or(&syn::Visibility::Inherited)
     }
 
-    pub fn methods(&self) -> (Vec<String>, Vec<TokenStream2>, Vec<TokenStream2>) {
+    pub fn methods(
+        &self,
+        ident: Option<&str>,
+    ) -> (
+        Vec<String>,
+        Vec<TokenStream2>,
+        Vec<TokenStream2>,
+        Vec<usize>,
+    ) {
         let mut names = Vec::new();
         let mut calls = Vec::new();
         let mut impls = Vec::new();
+        let mut arg_counts = Vec::new();
 
         for method in &self.methods {
             let call = method.call_ident();
@@ -81,12 +90,16 @@ impl<'m> SciterMod<'m> {
                 }
             };
 
+            let call_ident = ident
+                .map(|i| quote::format_ident!("{i}"))
+                .unwrap_or_else(|| quote::format_ident!("self"));
             names.push(method.name());
-            calls.push(quote! { self.#call(args) });
+            calls.push(quote! { #call_ident . #call(args) });
             impls.push(call_impl);
+            arg_counts.push(method.arg_count());
         }
 
-        (names, calls, impls)
+        (names, calls, impls, arg_counts)
     }
 
     fn get_mod_methods(module: &'m syn::ItemMod) -> syn::Result<Vec<MethodInfo<'m>>> {

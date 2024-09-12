@@ -1,15 +1,18 @@
 use std::str::FromStr;
 
 use proc_macro::TokenStream;
-use proc_macro2::{
-    Ident, Literal as Literal2, TokenStream as TokenStream2, TokenTree as TokenTree2,
-};
+use proc_macro2::{Literal as Literal2, TokenStream as TokenStream2, TokenTree as TokenTree2};
 use proc_macro_error::proc_macro_error;
 use quote::{quote, ToTokens};
 use syn::spanned::Spanned;
 
 pub(crate) mod items;
 pub(crate) mod sciter_mod;
+
+fn to_cstr_lit(data: &impl std::fmt::Display) -> TokenStream2 {
+    let data = format!("c\"{data}\"");
+    Literal2::from_str(&data).unwrap().into_token_stream()
+}
 
 #[proc_macro_error]
 #[proc_macro]
@@ -21,9 +24,7 @@ pub fn cstr(ts: TokenStream) -> TokenStream {
         proc_macro_error::abort!(span, "Expected ident");
     };
 
-    let data = format!("c\"{ident}\"");
-    let ts2 = Literal2::from_str(&data).unwrap().into_token_stream();
-    ts2.into()
+    to_cstr_lit(&ident).into()
 }
 
 #[proc_macro_error]
@@ -82,6 +83,8 @@ fn asset_process_module(
     let (info, module) = sciter_mod::SciterMod::prepare(&mut module, attr)?;
     let vis = info.visibility();
     let provider_struct_name = info.name_path();
+
+    let code = generate_mod_asset(&info);
     Ok(quote!(
         #[allow(non_snake_case)]
         #[allow(dead_code)]
@@ -89,7 +92,81 @@ fn asset_process_module(
 
         #vis struct #provider_struct_name;
 
+        #code
     ))
+}
+
+fn generate_mod_asset(smod: &sciter_mod::SciterMod) -> TokenStream2 {
+    let provider_struct_name = smod.name_path();
+    let (names, calls, implementations, arg_counts) = smod.methods(Some("asset_mut"));
+
+    let mut method_defs = Vec::new();
+    for ((name, call), arg_count) in names.iter().zip(calls).zip(arg_counts) {
+        let thunk_name = quote::format_ident!("{name}_thunk");
+        let cstr_name = to_cstr_lit(&name);
+        method_defs.push(quote! {
+            {
+                unsafe extern "C" fn #thunk_name(
+                    thing: *mut bindings::som_asset_t,
+                    argc: bindings::UINT,
+                    argv: *const bindings::SCITER_VALUE,
+                    p_result: *mut bindings::SCITER_VALUE,
+                ) -> bindings::SBOOL {
+                    let args = ::rsciter::args_from_raw_parts(argv, argc);
+                    let mut asset_mut = som::AssetRefMut::<#provider_struct_name>::new(thing);
+                    match #call {
+                        Ok(Some(res)) => {
+                            *p_result = res.take();
+                            1
+                        },
+                        Ok(_) => {
+                            // successful call, no return value
+                            1
+                        },
+                        Err(_err) => {
+                            // TODO: Value::error_string
+                            0
+                        }
+                    }
+                }
+
+                ::rsciter::som::Atom::new(#cstr_name).map(|name| ::rsciter::som::MethodDef {
+                    reserved: std::ptr::null_mut(),
+                    name: name.into(),
+                    params: #arg_count,
+                    func: Some(#thunk_name),
+                })
+            },
+        });
+    }
+
+    let count = method_defs.len();
+
+    quote! {
+        // fo mod generate passport here
+        impl ::rsciter::som::HasPassport for #provider_struct_name {
+            fn passport(&self) -> ::rsciter::Result<&'static ::rsciter::som::Passport> {
+                let passport = ::rsciter::som::impl_passport!(self, #provider_struct_name);
+                passport
+            }
+        }
+
+        impl ::rsciter::som::Methods for #provider_struct_name {
+            fn methods() -> &'static [Result<som::MethodDef>] {
+                static METHODS: std::sync::OnceLock<[Result<som::MethodDef>; #count]> = std::sync::OnceLock::new();
+                METHODS.get_or_init(|| {
+                    [
+                        #( #method_defs )*
+                    ]
+                })
+            }
+        }
+
+        #[allow(non_snake_case)]
+        impl #provider_struct_name {
+            #( #implementations )*
+        }
+    }
 }
 
 #[proc_macro_error]
@@ -159,7 +236,7 @@ fn xmod_process_impl_block(
 
 fn generate_xfunction_provider(info: &sciter_mod::SciterMod) -> TokenStream2 {
     let provider_struct_name = info.name_path();
-    let (names, calls, implementations) = info.methods();
+    let (names, calls, implementations, _) = info.methods(None);
 
     quote! {
         impl ::rsciter::XFunctionProvider for #provider_struct_name {
@@ -197,6 +274,8 @@ mod tests {
         let code = TokenStream2::from_str(code).unwrap();
         let result = f(attrs, code).unwrap().to_string();
 
+        dbg!(&result);
+
         let file = syn::parse_file(&result).unwrap();
         prettyplease::unparse(&file)
     }
@@ -207,7 +286,7 @@ mod tests {
             "attrs",
             r#"
 mod M {
-    pub fn second(&self, x: u64, x_ref: &u64) {
+    pub fn second(x: u64, x_ref: &u64) {
         let _ = x;
         let _ = x_ref;
     }
@@ -221,7 +300,7 @@ mod M {
 #[allow(non_snake_case)]
 #[allow(dead_code)]
 mod M {
-    pub fn second(&self, x: u64, x_ref: &u64) {
+    pub fn second(x: u64, x_ref: &u64) {
         let _ = x;
         let _ = x_ref;
     }
@@ -336,12 +415,11 @@ impl S {
         let result = expand(
             "",
             r#"
-mod M {
-    pub fn second(&self, x: u64, x_ref: &u64) {
-        let _ = x;
-        let _ = x_ref;
+mod Namespace {
+    pub fn open(path: &str, flags:usize) {
+        todo!()
     }
-}    
+}
 "#,
             asset_impl,
         );
