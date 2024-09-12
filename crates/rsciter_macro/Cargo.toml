@@ -20,4 +20,6 @@ proc-macro-error = { version = "1.0", default-features = false }
 
 [dev-dependencies]
 trybuild = "1"
+prettyplease = "0.2.22"
+expect-test = "1.5.0"
 rsciter.workspace = true

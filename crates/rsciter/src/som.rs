@@ -270,7 +270,7 @@ macro_rules! impl_prop {
             else {
                 return 0;
             };
-            
+
             1
         }
 

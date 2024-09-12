@@ -15,7 +15,22 @@ pub struct SciterMod<'m> {
 impl<'m> SciterMod<'m> {
     const ERR_SRC: &'static str = "xmod";
 
-    pub fn from_mod(module: &'m syn::ItemMod, name: String) -> syn::Result<Self> {
+    pub fn prepare(
+        module: &'m mut syn::ItemMod,
+        attr: TokenStream2,
+    ) -> syn::Result<(Self, &'m syn::ItemMod)> {
+        let mut struct_name = attr.to_string();
+        if struct_name.is_empty() {
+            struct_name = module.ident.to_string();
+            // struct and module names are in the same namespace,
+            // have to rename the module to use its name
+            module.ident = Ident::new(&format!("{}_mod", &module.ident), module.ident.span());
+        }
+
+        Self::from_mod(module, struct_name)
+    }
+
+    fn from_mod(module: &'m syn::ItemMod, name: String) -> syn::Result<(Self, &'m syn::ItemMod)> {
         let methods = Self::get_mod_methods(module)?;
 
         let mod_ident = &module.ident;
@@ -23,12 +38,15 @@ impl<'m> SciterMod<'m> {
 
         let path = Path::from(Ident::new(&name, Span::call_site()));
 
-        Ok(Self {
-            vis: Some(&module.vis),
-            prefix,
-            name: TypePath { qself: None, path },
-            methods,
-        })
+        Ok((
+            Self {
+                vis: Some(&module.vis),
+                prefix,
+                name: TypePath { qself: None, path },
+                methods,
+            },
+            module,
+        ))
     }
 
     pub fn from_impl_block(impl_block: &'m syn::ItemImpl) -> syn::Result<Self> {
