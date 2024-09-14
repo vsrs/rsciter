@@ -11,8 +11,10 @@ fn main() {
 const HTML: &'static [u8] = br#"<html>
 <head>
   <script>
-    Db.open("test.db", 0);
-    Db.update("asdf");
+    const str = Db.open("test.db", 4);
+    console.log(`open result: "${str}"`);
+
+    Db.update("test.db");
   </script>
 </head>
 
@@ -23,8 +25,8 @@ const HTML: &'static [u8] = br#"<html>
 
 #[rsciter::asset]
 mod Db {
-    pub fn open(path: &str, flags: u64) {
-        println!("Opening: {path} with flags: {flags}");
+    pub fn open(path: &str, flags: u64) -> String {
+        format!("Opening: {path} with flags: {flags}")
     }
 
     pub fn update(path: &str) {

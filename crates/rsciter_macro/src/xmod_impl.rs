@@ -15,8 +15,8 @@ pub fn xmod(attr: TokenStream, input: TokenStream) -> syn::Result<TokenStream> {
     }
 
     match syn::parse2::<syn::ItemImpl>(input) {
-        Err(e) => Err(syn::Error::new(e.span(), MESSAGE.to_string())),
         Ok(impl_block) => xmod_process_impl_block(attr, impl_block),
+        Err(e) => Err(syn::Error::new(e.span(), MESSAGE)),
     }
 }
 

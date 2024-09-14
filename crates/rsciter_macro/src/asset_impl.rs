@@ -21,7 +21,7 @@ pub fn asset(attr: TokenStream, input: TokenStream) -> syn::Result<TokenStream> 
 
     match syn::parse2::<syn::ItemStruct>(input) {
         Ok(s) => asset_process_struct(attr, s),
-        Err(e) => Err(syn::Error::new(e.span(), MESSAGE.to_string())),
+        Err(e) => Err(syn::Error::new(e.span(), MESSAGE)),
     }
 }
 
@@ -29,6 +29,8 @@ fn asset_process_struct(
     attr: TokenStream,
     struct_item: syn::ItemStruct,
 ) -> Result<TokenStream, syn::Error> {
+    let _ = struct_item;
+    let _ = attr;
     todo!()
 }
 
@@ -36,6 +38,8 @@ fn asset_process_impl_block(
     attr: TokenStream,
     impl_block: syn::ItemImpl,
 ) -> Result<TokenStream, syn::Error> {
+    let _ = impl_block;
+    let _ = attr;
     todo!()
 }
 
