@@ -4,13 +4,36 @@ use syn::spanned::Spanned;
 
 use crate::{sciter_mod::SciterMod, to_cstr_lit};
 
+pub fn asset_ns(attr: TokenStream, input: TokenStream) -> syn::Result<TokenStream> {
+    const MESSAGE: &str =
+        "the #[rsciter::asset_ns] attribute can only be applied to an inline module!";
+
+    match syn::parse2::<syn::ItemMod>(input.clone()) {
+        Ok(m) if m.content.is_none() => return Err(syn::Error::new(m.span(), MESSAGE)),
+        Err(e) => Err(syn::Error::new(e.span(), MESSAGE)),
+        Ok(module) => {
+            let (code, name) = asset_process_module(attr, module)?;
+
+            Ok(quote! {
+                #code
+
+                impl #name {
+                    pub fn new() -> ::rsciter::Result<::rsciter::som::GlobalAsset<#name>> {
+                        ::rsciter::som::GlobalAsset::new(#name)
+                    }
+                }
+            })
+        }
+    }
+}
+
 pub fn asset(attr: TokenStream, input: TokenStream) -> syn::Result<TokenStream> {
     const MESSAGE: &str =
         "the #[rsciter::asset] attribute can only be applied to a struct, inline module or impl block!";
 
     match syn::parse2::<syn::ItemMod>(input.clone()) {
         Ok(m) if m.content.is_none() => return Err(syn::Error::new(m.span(), MESSAGE)),
-        Ok(module) => return asset_process_module(attr, module),
+        Ok(module) => return asset_process_module(attr, module).map(|r| r.0),
         _ => (),
     }
 
@@ -46,20 +69,23 @@ fn asset_process_impl_block(
 fn asset_process_module(
     attr: TokenStream,
     mut module: syn::ItemMod,
-) -> Result<TokenStream, syn::Error> {
+) -> Result<(TokenStream, syn::TypePath), syn::Error> {
     let (info, module) = SciterMod::prepare(&mut module, attr)?;
     let vis = info.visibility();
     let provider_struct_name = info.name_path();
 
     let code = generate_mod_asset(&info);
-    Ok(quote!(
-        #[allow(non_snake_case)]
-        #[allow(dead_code)]
-        #module // TODO: remove attrs like #[transparent]
+    Ok((
+        quote!(
+            #[allow(non_snake_case)]
+            #[allow(dead_code)]
+            #module // TODO: remove attrs like #[transparent]
 
-        #vis struct #provider_struct_name;
+            #vis struct #provider_struct_name;
 
-        #code
+            #code
+        ),
+        provider_struct_name.clone(),
     ))
 }
 

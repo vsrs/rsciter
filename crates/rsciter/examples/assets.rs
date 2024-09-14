@@ -23,7 +23,7 @@ const HTML: &'static [u8] = br#"<html>
 
 </html>"#;
 
-#[rsciter::asset]
+#[rsciter::asset_ns]
 mod Db {
     pub fn open(path: &str, flags: u64) -> String {
         format!("Opening: {path} with flags: {flags}")
@@ -42,7 +42,7 @@ fn try_main() -> Result<i32> {
     })?;
 
     // let _ = will drop the Db immediately!
-    let _guard = som::GlobalAsset::new(Db)?;
+    let _guard = Db::new()?;
 
     let window = Window::builder().with_html(HTML).build_main()?;
     window.show(Visibility::Normal)?;
