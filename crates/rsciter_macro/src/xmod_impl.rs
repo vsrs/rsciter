@@ -78,8 +78,8 @@ fn generate_xfunction_provider(info: &SciterMod) -> TokenStream {
 
 #[cfg(test)]
 mod tests {
-    use expect_test::expect;
     use crate::tests::expand;
+    use expect_test::expect;
 
     use super::*;
 

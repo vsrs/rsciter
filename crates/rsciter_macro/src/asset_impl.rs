@@ -137,7 +137,6 @@ mod tests {
     use crate::tests::expand;
 
     use super::*;
-    
 
     #[test]
     fn test_asset_mod() {
