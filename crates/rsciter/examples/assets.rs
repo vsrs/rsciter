@@ -11,9 +11,12 @@ fn main() {
 const HTML: &'static [u8] = br#"<html>
 <head>
   <script>
+  {
     const obj = Db.open("test.db", 4);
     console.log(`open result: "${obj}"`);
     obj.update("value");
+  }
+  console.log("End of scope");
   </script>
 </head>
 

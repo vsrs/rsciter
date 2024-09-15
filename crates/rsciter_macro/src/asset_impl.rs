@@ -5,7 +5,10 @@ use syn::spanned::Spanned;
 use crate::{sciter_mod::SciterMod, to_cstr_lit};
 
 pub fn passport(_attr: TokenStream, input: TokenStream) -> syn::Result<TokenStream> {
-    let strukt = syn::parse2::<syn::ItemStruct>(input)?;
+    const MESSAGE: &str =
+        "the #[derive(rsciter::Passport)] can only be applied to a struct!";
+
+    let strukt = syn::parse2::<syn::ItemStruct>(input).map_err(|e| syn::Error::new(e.span(), MESSAGE))?;
     Ok(generate_passport(strukt.ident))
 }
 
