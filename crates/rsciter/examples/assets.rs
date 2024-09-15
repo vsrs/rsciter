@@ -11,10 +11,9 @@ fn main() {
 const HTML: &'static [u8] = br#"<html>
 <head>
   <script>
-    const str = Db.open("test.db", 4);
-    console.log(`open result: "${str}"`);
-
-    Db.update("test.db");
+    const obj = Db.open("test.db", 4);
+    console.log(`open result: "${obj}"`);
+    obj.update("value");
   </script>
 </head>
 
@@ -23,14 +22,25 @@ const HTML: &'static [u8] = br#"<html>
 
 </html>"#;
 
+#[derive(rsciter::Passport)]
+struct Object {
+    path: String,
+    flags: u64,
+}
+
+#[rsciter::asset]
+impl Object {
+    pub fn update(&self, value: &str) {
+        println!("Updating: {value} for {} with {}", self.path, self.flags);
+    }
+}
+
 #[rsciter::asset_ns]
 mod Db {
-    pub fn open(path: &str, flags: u64) -> String {
-        format!("Opening: {path} with flags: {flags}")
-    }
+    use super::*;
 
-    pub fn update(path: &str) {
-        println!("Updating: {path}");
+    pub fn open(path: &str, flags: u64) -> Object {
+        Object{ path: path.into(), flags }
     }
 }
 

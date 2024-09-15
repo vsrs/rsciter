@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use crate::{api::sapi, bindings::*, utf, Error, Result, ValueError};
+use crate::{api::sapi, bindings::*, som::{Asset, HasPassport}, utf, Error, Result, ValueError};
 
 #[repr(transparent)]
 pub struct Value(pub(crate) VALUE);
@@ -163,6 +163,13 @@ impl Value {
             Some(functor_release_thunk),
             tag as LPVOID,
         )?;
+        Ok(this)
+    }
+
+    pub fn asset<T: HasPassport>(asset: Asset<T>) -> Result<Self> {
+        let mut this = Self::new();
+        let ptr = asset.to_raw_ptr();
+        sapi()?.value_int64_data_set(&mut this.0, ptr as i64, VALUE_TYPE::T_ASSET, None)?;
         Ok(this)
     }
 }

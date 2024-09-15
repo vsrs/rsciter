@@ -1,8 +1,13 @@
 use proc_macro2::TokenStream;
-use quote::quote;
+use quote::{quote, ToTokens};
 use syn::spanned::Spanned;
 
 use crate::{sciter_mod::SciterMod, to_cstr_lit};
+
+pub fn passport(_attr: TokenStream, input: TokenStream) -> syn::Result<TokenStream> {
+    let strukt = syn::parse2::<syn::ItemStruct>(input)?;
+    Ok(generate_passport(strukt.ident))
+}
 
 pub fn asset_ns(attr: TokenStream, input: TokenStream) -> syn::Result<TokenStream> {
     const MESSAGE: &str =
@@ -58,12 +63,19 @@ fn asset_process_struct(
 }
 
 fn asset_process_impl_block(
-    attr: TokenStream,
-    impl_block: syn::ItemImpl,
+    _attr: TokenStream,
+    block: syn::ItemImpl,
 ) -> Result<TokenStream, syn::Error> {
-    let _ = impl_block;
-    let _ = attr;
-    todo!()
+    let info = SciterMod::from_impl_block(&block)?;
+    let methods = generate_mod_methods(&info);
+
+    Ok(quote! {
+        #[allow(non_snake_case)]
+        #[allow(dead_code)]
+        #block
+
+        #methods
+    })
 }
 
 fn asset_process_module(
@@ -74,7 +86,8 @@ fn asset_process_module(
     let vis = info.visibility();
     let provider_struct_name = info.name_path();
 
-    let code = generate_mod_asset(&info);
+    let methods = generate_mod_methods(&info);
+    let passport = generate_passport(provider_struct_name);
     Ok((
         quote!(
             #[allow(non_snake_case)]
@@ -83,13 +96,26 @@ fn asset_process_module(
 
             #vis struct #provider_struct_name;
 
-            #code
+            #methods
+
+            #passport
         ),
         provider_struct_name.clone(),
     ))
 }
 
-fn generate_mod_asset(smod: &SciterMod) -> TokenStream {
+fn generate_passport(name: impl ToTokens) -> TokenStream {
+    quote! {
+        impl ::rsciter::som::HasPassport for #name {
+            fn passport(&self) -> ::rsciter::Result<&'static ::rsciter::som::Passport> {
+                let passport = ::rsciter::som::impl_passport!(self, #name);
+                passport
+            }
+        }
+    }
+}
+
+fn generate_mod_methods(smod: &SciterMod) -> TokenStream {
     let provider_struct_name = smod.name_path();
     let (names, calls, implementations, arg_counts) = smod.methods(Some("asset_mut"));
 
@@ -134,16 +160,7 @@ fn generate_mod_asset(smod: &SciterMod) -> TokenStream {
     }
 
     let count = method_defs.len();
-
     quote! {
-        // for mod generate passport here
-        impl ::rsciter::som::HasPassport for #provider_struct_name {
-            fn passport(&self) -> ::rsciter::Result<&'static ::rsciter::som::Passport> {
-                let passport = ::rsciter::som::impl_passport!(self, #provider_struct_name);
-                passport
-            }
-        }
-
         impl ::rsciter::som::Methods for #provider_struct_name {
             fn methods() -> &'static [Result<som::MethodDef>] {
                 static METHODS: std::sync::OnceLock<[Result<som::MethodDef>; #count]> = std::sync::OnceLock::new();
@@ -164,6 +181,8 @@ fn generate_mod_asset(smod: &SciterMod) -> TokenStream {
 
 #[cfg(test)]
 mod tests {
+    use expect_test::expect;
+
     use crate::tests::expand;
 
     use super::*;
@@ -182,6 +201,96 @@ mod Namespace {
             asset,
         );
 
-        println!("{result}");
+        expect![r#"
+#[allow(non_snake_case)]
+#[allow(dead_code)]
+mod Namespace_mod {
+    pub fn open(path: &str, flags: usize) {
+        todo!()
+    }
+}
+struct Namespace;
+impl ::rsciter::som::HasPassport for Namespace {
+    fn passport(&self) -> ::rsciter::Result<&'static ::rsciter::som::Passport> {
+        let passport = ::rsciter::som::impl_passport!(self, Namespace);
+        passport
+    }
+}
+impl ::rsciter::som::Methods for Namespace {
+    fn methods() -> &'static [Result<som::MethodDef>] {
+        static METHODS: std::sync::OnceLock<[Result<som::MethodDef>; 1usize]> = std::sync::OnceLock::new();
+        METHODS
+            .get_or_init(|| {
+                [
+                    {
+                        unsafe extern "C" fn open_thunk(
+                            thing: *mut bindings::som_asset_t,
+                            argc: bindings::UINT,
+                            argv: *const bindings::SCITER_VALUE,
+                            p_result: *mut bindings::SCITER_VALUE,
+                        ) -> bindings::SBOOL {
+                            let args = ::rsciter::args_from_raw_parts(argv, argc);
+                            let mut asset_mut = som::AssetRefMut::<
+                                Namespace,
+                            >::new(thing);
+                            match asset_mut.call_open(args) {
+                                Ok(Some(res)) => {
+                                    *p_result = res.take();
+                                    1
+                                }
+                                Ok(_) => 1,
+                                Err(_err) => 0,
+                            }
+                        }
+                        ::rsciter::som::Atom::new(c"open")
+                            .map(|name| ::rsciter::som::MethodDef {
+                                reserved: std::ptr::null_mut(),
+                                name: name.into(),
+                                params: 2usize,
+                                func: Some(open_thunk),
+                            })
+                    },
+                ]
+            })
+    }
+}
+#[allow(non_snake_case)]
+impl Namespace {
+    fn call_open(
+        &mut self,
+        args: &[::rsciter::Value],
+    ) -> ::rsciter::Result<Option<::rsciter::Value>> {
+        if args.len() != 2usize {
+            return Err(::rsciter::Error::ScriptingInvalidArgCount("open".to_string()));
+        }
+        let path = <String as ::rsciter::conv::FromValue>::from_value(&args[0usize])
+            .map_err(|err| ::rsciter::Error::ScriptingInvalidArgument(
+                "path",
+                Box::new(err),
+            ))?;
+        let flags = <usize as ::rsciter::conv::FromValue>::from_value(&args[1usize])
+            .map_err(|err| ::rsciter::Error::ScriptingInvalidArgument(
+                "flags",
+                Box::new(err),
+            ))?;
+        Namespace_mod::open(&path, flags);
+        Ok(None)
+    }
+}
+"#].assert_eq(&result);
+    }
+
+    #[test]
+    fn test_passport() {
+        let result = expand("", r#"struct S;"#, passport);
+
+        expect![r#"
+impl ::rsciter::som::HasPassport for S {
+    fn passport(&self) -> ::rsciter::Result<&'static ::rsciter::som::Passport> {
+        let passport = ::rsciter::som::impl_passport!(self, S);
+        passport
+    }
+}
+"#].assert_eq(&result);
     }
 }

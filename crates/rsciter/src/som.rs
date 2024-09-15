@@ -5,6 +5,7 @@ use std::{
     os::raw::{c_char, c_long, c_void},
     ptr::NonNull,
     slice, str,
+    sync::atomic::Ordering,
 };
 
 use crate::{api::sapi, bindings::*, Result, Value};
@@ -402,7 +403,7 @@ pub struct GlobalAsset<T: HasPassport> {
 impl<T: HasPassport> IAsset<T> for GlobalAsset<T> {
     fn class() -> som_asset_class_t {
         // global assets are not ref-counted.
-        unsafe extern "C" fn ref_count_stub(_thing: *mut som_asset_t) -> c_long {
+        unsafe extern "C" fn ref_count_stub(_thing: *mut som_asset_t) -> c_long {            
             return 1;
         }
 
@@ -445,11 +446,7 @@ impl<T: HasPassport> Drop for GlobalAsset<T> {
 impl<T: HasPassport> GlobalAsset<T> {
     pub fn new(data: T) -> Result<Self> {
         let obj = AssetObj::new(Self::class());
-        let res = AssetData {
-            _obj: obj.clone(),
-            data,
-        };
-
+        let res = AssetData::new(obj, data);
         let boxed = Box::new(res);
         let ptr = Box::into_raw(boxed);
 
@@ -462,8 +459,7 @@ impl<T: HasPassport> GlobalAsset<T> {
     }
 
     pub fn as_ref(&self) -> AssetRef<T> {
-        let ptr: *const som_asset_t = self.ptr.cast();
-        unsafe { AssetRef::new(ptr) }
+        unsafe { AssetRef::new(self.ptr.cast()) }
     }
 }
 
@@ -539,10 +535,19 @@ pub use impl_passport;
 
 #[repr(C)]
 struct AssetData<T> {
-    _obj: AssetObj,
+    obj: AssetObj,
     pub data: T,
 }
 
+impl<T> AssetData<T> {
+    fn new(obj: AssetObj, data: T) -> Self {
+        Self { obj, data }
+    }
+}
+
+// TODO: refactor to support AsRef and Borrow
+/// AssetRef does not use add_ref\release machinery,
+/// instead it utilizes a lifetime and guranted to be a valid reference to an asset.
 pub struct AssetRef<'a, T> {
     this: &'a AssetData<T>,
 }
@@ -598,6 +603,92 @@ impl<T> Deref for AssetRefMut<'_, T> {
 impl<T> DerefMut for AssetRefMut<'_, T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.data_mut()
+    }
+}
+
+pub struct Asset<T: HasPassport> {
+    boxed: Box<AssetDataWithCounter<T>>,
+}
+
+#[repr(C)]
+struct AssetDataWithCounter<T> {
+    data: AssetData<T>,
+    counter: std::sync::atomic::AtomicI32,
+}
+
+impl<T> AssetDataWithCounter<T> {
+    unsafe fn get_mut_ref<'c>(thing: *mut som_asset_t) -> &'c mut Self {
+        let this = thing as *mut AssetDataWithCounter<T>;
+        &mut *this
+    }
+}
+
+impl<T: HasPassport> IAsset<T> for Asset<T> {
+    fn class() -> som_asset_class_t {
+        unsafe extern "C" fn asset_add_ref<TT>(thing: *mut som_asset_t) -> c_long {
+            let this = AssetDataWithCounter::<TT>::get_mut_ref(thing);
+            let refc = this.counter.fetch_add(1, Ordering::SeqCst) + 1;
+            eprintln!("+ {thing:?} {refc}");
+            return refc;
+        }
+
+        unsafe extern "C" fn asset_release<TT>(thing: *mut som_asset_t) -> c_long {
+            let this = AssetDataWithCounter::<TT>::get_mut_ref(thing);
+            let refc = this.counter.fetch_sub(1, Ordering::SeqCst) - 1;
+            eprintln!("- {thing:?} {refc}");
+            if refc == 0 {
+                let _asset_to_drop = Box::from_raw(thing as *mut AssetDataWithCounter<TT>);
+            }
+            return refc;
+        }
+
+        unsafe extern "C" fn asset_get_interface(
+            _thing: *mut som_asset_t,
+            _name: *const c_char,
+            _out: *mut *mut c_void,
+        ) -> c_long {
+            // TODO: query interface (any usage?)
+            return 0;
+        }
+
+        unsafe extern "C" fn asset_get_passport<TT: HasPassport>(
+            thing: *mut som_asset_t,
+        ) -> *mut som_passport_t {
+            let asset_ref = AssetRef::<TT>::new(thing);
+            let Ok(passport) = asset_ref.passport() else {
+                return std::ptr::null_mut();
+            };
+            passport as *const _ as *mut _
+        }
+
+        som_asset_class_t {
+            asset_add_ref: Some(asset_add_ref::<T>),
+            asset_release: Some(asset_release::<T>),
+            asset_get_interface: Some(asset_get_interface),
+            asset_get_passport: Some(asset_get_passport::<T>),
+        }
+    }
+}
+
+impl<T: HasPassport> Asset<T> {
+    pub fn new(data: T) -> Self {
+        let obj = AssetObj::new(Self::class());
+        Self {
+            boxed: Box::new(AssetDataWithCounter {
+                data: AssetData::new(obj, data),
+                counter: Default::default(),
+            }),
+        }
+    }
+
+    pub(crate) fn to_raw_ptr(self) -> *const som_asset_t {
+        let ptr = Box::into_raw(self.boxed);
+        ptr.cast()
+    }
+
+    pub fn as_ref(&self) -> AssetRef<T> {
+        let ptr = &self.boxed.as_ref().data as *const AssetData<T>;
+        unsafe { AssetRef::new(ptr.cast()) }
     }
 }
 

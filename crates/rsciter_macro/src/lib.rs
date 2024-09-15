@@ -42,6 +42,12 @@ pub fn asset_ns(attr: TokenStream, input: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_error]
+#[proc_macro_derive(Passport)]
+pub fn passport(input: TokenStream) -> TokenStream {
+    with_impl(TokenStream::new(), input, asset_impl::passport)
+}
+
+#[proc_macro_error]
 #[proc_macro_attribute]
 pub fn xmod(attr: TokenStream, input: TokenStream) -> TokenStream {
     with_impl(attr, input, xmod_impl::xmod)
