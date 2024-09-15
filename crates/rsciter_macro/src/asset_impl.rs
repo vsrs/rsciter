@@ -99,9 +99,9 @@ fn asset_process_module(
 
             #vis struct #provider_struct_name;
 
-            #methods
-
             #passport
+
+            #methods
         ),
         provider_struct_name.clone(),
     ))
