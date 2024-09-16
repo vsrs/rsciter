@@ -3,7 +3,6 @@ use std::{
     num::NonZero,
     ops::{Deref, DerefMut},
     os::raw::{c_char, c_long, c_void},
-    ptr::NonNull,
     slice, str,
     sync::atomic::Ordering,
 };
@@ -46,62 +45,49 @@ unsafe extern "C" fn str_thunk(data: LPCSTR, len: UINT, target_ptr: LPVOID) {
     *target = data.to_string();
 }
 
-#[repr(C)]
-#[derive(Debug, Eq, PartialEq, Hash)]
-pub struct AssetObj(NonNull<som_asset_class_t>);
+#[repr(transparent)]
+struct RawAssetObj(som_asset_t);
 
-impl Clone for AssetObj {
-    fn clone(&self) -> Self {
-        let _res = self.add_ref();
-        debug_assert_ne!(-1, _res, "No asset_add_ref!");
-
-        Self(self.0)
-    }
-}
-
-impl Drop for AssetObj {
-    fn drop(&mut self) {
-        let _res = self.release();
-        debug_assert_ne!(-1, _res, "No asset_release!");
-    }
-}
-
-impl AssetObj {
+#[allow(dead_code)]
+impl RawAssetObj {
     pub(crate) fn new(class_data: som_asset_class_t) -> Self {
         let isa = Box::new(class_data);
-        Self(unsafe { NonNull::new_unchecked(Box::into_raw(isa)) })
+        Self(som_asset_t {
+            isa: Box::into_raw(isa),
+        })
+    }
+
+    pub(crate) fn vtable(&self) -> &som_asset_class_t {
+        unsafe { &*self.0.isa }
     }
 
     pub(crate) fn add_ref(&self) -> c_long {
         unsafe {
-            let Some(f) = self.0.as_ref().asset_add_ref else {
+            let Some(f) = self.vtable().asset_add_ref else {
                 return -1;
             };
 
-            f(core::mem::transmute_copy(self))
+            f(core::mem::transmute_copy(&self))
         }
     }
 
     pub(crate) fn release(&self) -> c_long {
         unsafe {
-            let Some(f) = self.0.as_ref().asset_release else {
+            let Some(f) = self.vtable().asset_release else {
                 return -1;
             };
 
-            f(core::mem::transmute_copy(self))
+            f(core::mem::transmute_copy(&self))
         }
     }
 
     pub fn passport(&self) -> Option<&som_passport_t> {
         unsafe {
-            self.0
-                .as_ref()
+            self.vtable()
                 .asset_get_passport
-                .map(|f| &*f(core::mem::transmute_copy(self)))
+                .map(|f| &*f(core::mem::transmute_copy(&self)))
         }
     }
-
-    // TODO: enumerate properties & methods, call methods
 }
 
 pub type Passport = crate::bindings::som_passport_t;
@@ -445,7 +431,7 @@ impl<T: HasPassport> Drop for GlobalAsset<T> {
 
 impl<T: HasPassport> GlobalAsset<T> {
     pub fn new(data: T) -> Result<Self> {
-        let obj = AssetObj::new(Self::class());
+        let obj = RawAssetObj::new(Self::class());
         let res = AssetData::new(obj, data);
         let boxed = Box::new(res);
         let ptr = Box::into_raw(boxed);
@@ -535,12 +521,12 @@ pub use impl_passport;
 
 #[repr(C)]
 struct AssetData<T> {
-    obj: AssetObj,
+    obj: RawAssetObj,
     pub data: T,
 }
 
 impl<T> AssetData<T> {
-    fn new(obj: AssetObj, data: T) -> Self {
+    fn new(obj: RawAssetObj, data: T) -> Self {
         Self { obj, data }
     }
 }
@@ -628,14 +614,12 @@ impl<T: HasPassport> IAsset<T> for Asset<T> {
         unsafe extern "C" fn asset_add_ref<TT>(thing: *mut som_asset_t) -> c_long {
             let this = AssetDataWithCounter::<TT>::get_mut_ref(thing);
             let refc = this.counter.fetch_add(1, Ordering::SeqCst) + 1;
-            eprintln!("+ {thing:?} {refc}");
             return refc;
         }
 
         unsafe extern "C" fn asset_release<TT>(thing: *mut som_asset_t) -> c_long {
             let this = AssetDataWithCounter::<TT>::get_mut_ref(thing);
             let refc = this.counter.fetch_sub(1, Ordering::SeqCst) - 1;
-            eprintln!("- {thing:?} {refc}");
             if refc == 0 {
                 // TODO: should not panic, reason: for each asset we got unexpected asset_release call with bad ptr
                 let _ = std::panic::catch_unwind(|| {
@@ -675,7 +659,7 @@ impl<T: HasPassport> IAsset<T> for Asset<T> {
 
 impl<T: HasPassport> Asset<T> {
     pub fn new(data: T) -> Self {
-        let obj = AssetObj::new(Self::class());
+        let obj = RawAssetObj::new(Self::class());
         Self {
             boxed: Box::new(AssetDataWithCounter {
                 data: AssetData::new(obj, data),

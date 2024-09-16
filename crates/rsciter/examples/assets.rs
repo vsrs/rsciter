@@ -10,14 +10,18 @@ fn main() {
 
 const HTML: &'static [u8] = br#"<html>
 <head>
-  <script>  
-    const obj = Db.open("test.db", 4);
-    console.log(`open result: "${obj}, ${obj.path}, ${obj.flags}"`);
+  <script>
+    let obj;
+    {
+      obj = Db.open("test.db", 4);
+      console.log(`open result: "${obj}, ${obj.path}, ${obj.flags}"`);
 
-    const updateRes = obj.update("value");
-    console.log(updateRes, updateRes.message);
+      const updateRes = obj.update("value");
+      console.log(updateRes, updateRes.message);
 
-    console.log(`Update result: "${updateRes.message()}"`);
+      console.log(`Update result: "${updateRes.message()}"`);
+    }
+    console.log("End of scope");
   </script>
 </head>
 
@@ -32,6 +36,12 @@ struct Object {
     flags: u64,
 }
 
+impl Drop for Object {
+    fn drop(&mut self) {
+        println!("Object droped");
+    }
+}
+
 #[rsciter::asset]
 impl Object {
     pub fn update(&self, value: &str) -> UpdateRes {
@@ -43,6 +53,11 @@ impl Object {
 }
 
 struct UpdateRes(String);
+impl Drop for UpdateRes {
+    fn drop(&mut self) {
+        println!("UpdateRes droped");
+    }
+}
 
 // If a struct  itself does not have #[rsciter::asset] attribute,
 // it's enough to specify #[rsciter::asset(HasPassport)] for impl block
