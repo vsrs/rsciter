@@ -275,7 +275,7 @@ macro_rules! impl_prop {
             1
         }
 
-        som::Atom::new(::rsciter_macro::cstr!($name)).map(|name| som::PropertyDef {
+        som::Atom::new(::rsciter::cstr!($name)).map(|name| som::PropertyDef {
             type_: bindings::SOM_PROP_TYPE::SOM_PROP_ACCSESSOR.0 as _,
             name: name.into(),
             u: som::PropertyAccessorDef {
@@ -471,7 +471,7 @@ macro_rules! impl_passport {
 
         let res = PASSPORT.get_or_init(|| {
             let mut passport =
-                ::rsciter::bindings::som_passport_t::new(::rsciter_macro::cstr!($type))?;
+                ::rsciter::bindings::som_passport_t::new(::rsciter::cstr!($type))?;
             use ::rsciter::som::{
                 self, HasFields, HasItemGetter, HasItemSetter, HasMethods, HasVirtualProperties,
             };
