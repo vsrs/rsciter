@@ -267,7 +267,7 @@ macro_rules! impl_prop {
             let mut asset_mut = som::AssetRefMut::<$type>::new(thing);
             let value = p_value.as_value_ref();
             let Ok(_) = ::rsciter::conv::FromValue::from_value(value)
-                .map(|v| asset_mut.age = v)
+                .map(|v| asset_mut.$name = v)
             else {
                 return 0;
             };

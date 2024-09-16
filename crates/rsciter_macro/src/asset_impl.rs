@@ -5,11 +5,37 @@ use syn::spanned::Spanned;
 use crate::{sciter_mod::SciterMod, to_cstr_lit};
 
 pub fn passport(_attr: TokenStream, input: TokenStream) -> syn::Result<TokenStream> {
-    const MESSAGE: &str =
-        "the #[derive(rsciter::Passport)] can only be applied to a struct!";
+    const MESSAGE: &str = "the #[derive(rsciter::Passport)] can only be applied to a struct!";
 
-    let strukt = syn::parse2::<syn::ItemStruct>(input).map_err(|e| syn::Error::new(e.span(), MESSAGE))?;
-    Ok(generate_passport(strukt.ident))
+    let strukt =
+        syn::parse2::<syn::ItemStruct>(input).map_err(|e| syn::Error::new(e.span(), MESSAGE))?;
+
+    let has_asset_attr = strukt.attrs.iter().any(|attr| {
+        let path = attr.path();
+        if path.is_ident("asset") {
+            return true;
+        }
+
+        if path.segments.len() != 2 {
+            return false;
+        }
+
+        let Some(first) = path.segments.first() else {
+            return false;
+        };
+
+        let Some(last) = path.segments.last() else {
+            return false;
+        };
+
+        first.ident == "rsciter" && last.ident == "asset"
+    });
+
+    if has_asset_attr {
+        Ok(TokenStream::new())
+    } else {
+        Ok(generate_passport(strukt.ident))
+    }
 }
 
 pub fn asset_ns(attr: TokenStream, input: TokenStream) -> syn::Result<TokenStream> {
@@ -58,11 +84,47 @@ pub fn asset(attr: TokenStream, input: TokenStream) -> syn::Result<TokenStream> 
 
 fn asset_process_struct(
     attr: TokenStream,
-    struct_item: syn::ItemStruct,
+    strukt: syn::ItemStruct,
 ) -> Result<TokenStream, syn::Error> {
-    let _ = struct_item;
     let _ = attr;
-    todo!()
+
+    let struct_name = strukt.ident.clone();
+    let passport = generate_passport(&struct_name);
+    let fields: Vec<TokenStream> = strukt
+        .fields
+        .iter()
+        .filter_map(|field| {
+            field.ident
+                .as_ref()
+                .map(|field_name| quote! {impl_prop!( #struct_name :: #field_name) })
+        })
+        .collect();
+    let code = if fields.is_empty() {
+        TokenStream::new()
+    } else {
+        let count = fields.len();
+        quote! {
+            impl ::rsciter::som::Fields for #struct_name {
+                fn fields() -> &'static [::rsciter::Result<::rsciter::som::PropertyDef>] {
+                    static FIELDS: std::sync::OnceLock<[::rsciter::Result<::rsciter::som::PropertyDef>; #count]> =
+                        std::sync::OnceLock::new();
+                        
+                    use ::rsciter::impl_prop;
+
+                    FIELDS.get_or_init(|| [ #( #fields, )*  ])
+                }
+            }
+
+        }
+    };
+
+    Ok(quote! {
+        #strukt
+
+        #passport
+
+        #code
+    })
 }
 
 fn asset_process_impl_block(
@@ -287,13 +349,16 @@ impl Namespace {
     fn test_passport() {
         let result = expand("", r#"struct S;"#, passport);
 
-        expect![r#"
+        expect![
+            r#"
 impl ::rsciter::som::HasPassport for S {
     fn passport(&self) -> ::rsciter::Result<&'static ::rsciter::som::Passport> {
         let passport = ::rsciter::som::impl_passport!(self, S);
         passport
     }
 }
-"#].assert_eq(&result);
+"#
+        ]
+        .assert_eq(&result);
     }
 }

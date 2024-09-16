@@ -13,7 +13,7 @@ const HTML: &'static [u8] = br#"<html>
   <script>
   {
     const obj = Db.open("test.db", 4);
-    console.log(`open result: "${obj}"`);
+    console.log(`open result: "${obj}, ${obj.path}, ${obj.flags}"`);
     obj.update("value");
   }
   console.log("End of scope");
@@ -25,7 +25,7 @@ const HTML: &'static [u8] = br#"<html>
 
 </html>"#;
 
-#[derive(rsciter::Passport)]
+#[rsciter::asset]
 struct Object {
     path: String,
     flags: u64,
