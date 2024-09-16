@@ -1,5 +1,8 @@
 use super::Value;
-use crate::{som::{Asset, HasPassport}, Error, Result};
+use crate::{
+    som::{Asset, HasPassport},
+    Error, Result,
+};
 
 pub trait FromValue<'a>: Sized {
     fn from_value(value: &'a Value) -> Result<Self>;
@@ -214,7 +217,6 @@ where
         Value::array_from(value.iter())
     }
 }
-
 
 impl<T: HasPassport> ToValue for T {
     fn to_value(val: Self) -> Result<Value> {

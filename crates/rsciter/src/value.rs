@@ -1,6 +1,11 @@
 use std::fmt::Debug;
 
-use crate::{api::sapi, bindings::*, som::{Asset, HasPassport}, utf, Error, Result, ValueError};
+use crate::{
+    api::sapi,
+    bindings::*,
+    som::{Asset, HasPassport},
+    utf, Error, Result, ValueError,
+};
 
 #[repr(transparent)]
 pub struct Value(pub(crate) VALUE);

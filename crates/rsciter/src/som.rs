@@ -403,7 +403,7 @@ pub struct GlobalAsset<T: HasPassport> {
 impl<T: HasPassport> IAsset<T> for GlobalAsset<T> {
     fn class() -> som_asset_class_t {
         // global assets are not ref-counted.
-        unsafe extern "C" fn ref_count_stub(_thing: *mut som_asset_t) -> c_long {            
+        unsafe extern "C" fn ref_count_stub(_thing: *mut som_asset_t) -> c_long {
             return 1;
         }
 

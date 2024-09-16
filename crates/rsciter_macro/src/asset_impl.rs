@@ -94,7 +94,8 @@ fn asset_process_struct(
         .fields
         .iter()
         .filter_map(|field| {
-            field.ident
+            field
+                .ident
                 .as_ref()
                 .map(|field_name| quote! {impl_prop!( #struct_name :: #field_name) })
         })
@@ -108,7 +109,7 @@ fn asset_process_struct(
                 fn fields() -> &'static [::rsciter::Result<::rsciter::som::PropertyDef>] {
                     static FIELDS: std::sync::OnceLock<[::rsciter::Result<::rsciter::som::PropertyDef>; #count]> =
                         std::sync::OnceLock::new();
-                        
+
                     use ::rsciter::impl_prop;
 
                     FIELDS.get_or_init(|| [ #( #fields, )*  ])

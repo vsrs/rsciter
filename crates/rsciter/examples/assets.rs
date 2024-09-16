@@ -43,7 +43,10 @@ mod Db {
     use super::*;
 
     pub fn open(path: &str, flags: u64) -> Object {
-        Object{ path: path.into(), flags }
+        Object {
+            path: path.into(),
+            flags,
+        }
     }
 }
 
