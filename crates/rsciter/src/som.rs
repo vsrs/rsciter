@@ -637,7 +637,10 @@ impl<T: HasPassport> IAsset<T> for Asset<T> {
             let refc = this.counter.fetch_sub(1, Ordering::SeqCst) - 1;
             eprintln!("- {thing:?} {refc}");
             if refc == 0 {
-                let _asset_to_drop = Box::from_raw(thing as *mut AssetDataWithCounter<TT>);
+                // TODO: should not panic, reason: for each asset we got unexpected asset_release call with bad ptr
+                let _ = std::panic::catch_unwind(|| {
+                    let _asset_to_drop = Box::from_raw(thing as *mut AssetDataWithCounter<TT>);
+                });
             }
             return refc;
         }

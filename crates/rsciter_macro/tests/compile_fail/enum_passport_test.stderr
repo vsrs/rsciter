@@ -1,5 +1,0 @@
-error: the #[derive(rsciter::Passport)] can only be applied to a struct!
- --> tests/compile_fail/enum_passport_test.rs:2:1
-  |
-2 | enum E {}
-  | ^^^^

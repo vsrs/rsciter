@@ -110,7 +110,7 @@ fn asset_process_impl_block(
         #[allow(non_snake_case)]
         #[allow(dead_code)]
         #block
-        
+
         #passport
 
         #methods

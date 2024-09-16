@@ -13,8 +13,11 @@ const HTML: &'static [u8] = br#"<html>
   <script>  
     const obj = Db.open("test.db", 4);
     console.log(`open result: "${obj}, ${obj.path}, ${obj.flags}"`);
-    obj.update("value");  
-  console.log("End of scope");
+
+    const updateRes = obj.update("value");
+    console.log(updateRes, updateRes.message);
+
+    console.log(`Update result: "${updateRes.message()}"`);
   </script>
 </head>
 
@@ -31,8 +34,22 @@ struct Object {
 
 #[rsciter::asset]
 impl Object {
-    pub fn update(&self, value: &str) {
-        println!("Updating: {value} for {} with {}", self.path, self.flags);
+    pub fn update(&self, value: &str) -> UpdateRes {
+        UpdateRes(format!(
+            "Updating: {value} for {} with {}",
+            self.path, self.flags
+        ))
+    }
+}
+
+struct UpdateRes(String);
+
+// If a struct  itself does not have #[rsciter::asset] attribute,
+// it's enough to specify #[rsciter::asset(HasPassport)] for impl block
+#[rsciter::asset(HasPassport)]
+impl UpdateRes {
+    pub fn message(&self) -> &str {
+        &self.0
     }
 }
 
