@@ -4,40 +4,6 @@ use syn::spanned::Spanned;
 
 use crate::{sciter_mod::SciterMod, to_cstr_lit};
 
-pub fn passport(_attr: TokenStream, input: TokenStream) -> syn::Result<TokenStream> {
-    const MESSAGE: &str = "the #[derive(rsciter::Passport)] can only be applied to a struct!";
-
-    let strukt =
-        syn::parse2::<syn::ItemStruct>(input).map_err(|e| syn::Error::new(e.span(), MESSAGE))?;
-
-    let has_asset_attr = strukt.attrs.iter().any(|attr| {
-        let path = attr.path();
-        if path.is_ident("asset") {
-            return true;
-        }
-
-        if path.segments.len() != 2 {
-            return false;
-        }
-
-        let Some(first) = path.segments.first() else {
-            return false;
-        };
-
-        let Some(last) = path.segments.last() else {
-            return false;
-        };
-
-        first.ident == "rsciter" && last.ident == "asset"
-    });
-
-    if has_asset_attr {
-        Ok(TokenStream::new())
-    } else {
-        Ok(generate_passport(strukt.ident))
-    }
-}
-
 pub fn asset_ns(attr: TokenStream, input: TokenStream) -> syn::Result<TokenStream> {
     const MESSAGE: &str =
         "the #[rsciter::asset_ns] attribute can only be applied to an inline module!";
@@ -129,16 +95,23 @@ fn asset_process_struct(
 }
 
 fn asset_process_impl_block(
-    _attr: TokenStream,
+    attr: TokenStream,
     block: syn::ItemImpl,
 ) -> Result<TokenStream, syn::Error> {
     let info = SciterMod::from_impl_block(&block)?;
     let methods = generate_mod_methods(&info);
+    let passport = if attr.to_string() == "HasPassport" {
+        generate_passport(info.name_path())
+    } else {
+        TokenStream::new()
+    };
 
     Ok(quote! {
         #[allow(non_snake_case)]
         #[allow(dead_code)]
         #block
+        
+        #passport
 
         #methods
     })
@@ -344,22 +317,5 @@ impl Namespace {
     }
 }
 "#].assert_eq(&result);
-    }
-
-    #[test]
-    fn test_passport() {
-        let result = expand("", r#"struct S;"#, passport);
-
-        expect![
-            r#"
-impl ::rsciter::som::HasPassport for S {
-    fn passport(&self) -> ::rsciter::Result<&'static ::rsciter::som::Passport> {
-        let passport = ::rsciter::som::impl_passport!(self, S);
-        passport
-    }
-}
-"#
-        ]
-        .assert_eq(&result);
     }
 }

@@ -23,7 +23,7 @@ pub use window::*;
 pub type Result<T> = std::result::Result<T, Error>;
 
 // reexport macros
-pub use rsciter_macro::{asset, asset_ns, xmod, Passport};
+pub use rsciter_macro::{asset, asset_ns, xmod};
 
 #[cfg(all(windows, feature = "static"))]
 mod link_static {
