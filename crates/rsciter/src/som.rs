@@ -533,7 +533,7 @@ impl<T> AssetData<T> {
 
 // TODO: refactor to support AsRef and Borrow
 /// AssetRef does not use add_ref\release machinery,
-/// instead it utilizes a lifetime and guranted to be a valid reference to an asset.
+/// Instead, it utilizes a lifetime and is guaranteed to be a valid reference to an asset.
 pub struct AssetRef<'a, T> {
     this: &'a AssetData<T>,
 }

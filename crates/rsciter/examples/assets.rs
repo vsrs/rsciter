@@ -38,7 +38,7 @@ struct Object {
 
 impl Drop for Object {
     fn drop(&mut self) {
-        println!("Object droped");
+        println!("Object dropped");
     }
 }
 
@@ -55,11 +55,11 @@ impl Object {
 struct UpdateRes(String);
 impl Drop for UpdateRes {
     fn drop(&mut self) {
-        println!("UpdateRes droped");
+        println!("UpdateRes dropped");
     }
 }
 
-// If a struct  itself does not have #[rsciter::asset] attribute,
+// If the struct itself does not have #[rsciter::asset] attribute,
 // it's enough to specify #[rsciter::asset(HasPassport)] for impl block
 #[rsciter::asset(HasPassport)]
 impl UpdateRes {
