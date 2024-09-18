@@ -20,6 +20,9 @@ const HTML: &'static [u8] = br#"<html>
       console.log(updateRes, updateRes.message);
 
       console.log(`Update result: "${updateRes.message()}"`);
+
+      const inner = Db.open_ns("asfd");
+      console.log(inner, inner.msg);
     }
     console.log("End of scope");
   </script>
@@ -72,11 +75,19 @@ impl UpdateRes {
 mod Db {
     use super::*;
 
+    pub struct NsObject {
+        pub msg: String,
+    }
+
     pub fn open(path: &str, flags: u64) -> Object {
         Object {
             path: path.into(),
             flags,
         }
+    }
+
+    pub fn open_ns(msg: &str) -> NsObject {
+        NsObject { msg: msg.into() }
     }
 }
 

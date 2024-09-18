@@ -12,10 +12,10 @@ pub fn asset_ns(attr: TokenStream, input: TokenStream) -> syn::Result<TokenStrea
         Ok(m) if m.content.is_none() => return Err(syn::Error::new(m.span(), MESSAGE)),
         Err(e) => Err(syn::Error::new(e.span(), MESSAGE)),
         Ok(module) => {
-            let (code, name) = asset_process_module(attr, module)?;
+            let (mod_code, name) = asset_process_module(attr, module, true)?;
 
             Ok(quote! {
-                #code
+                #mod_code
 
                 impl #name {
                     pub fn new() -> ::rsciter::Result<::rsciter::som::GlobalAsset<#name>> {
@@ -33,7 +33,7 @@ pub fn asset(attr: TokenStream, input: TokenStream) -> syn::Result<TokenStream> 
 
     match syn::parse2::<syn::ItemMod>(input.clone()) {
         Ok(m) if m.content.is_none() => return Err(syn::Error::new(m.span(), MESSAGE)),
-        Ok(module) => return asset_process_module(attr, module).map(|r| r.0),
+        Ok(module) => return asset_process_module(attr, module, false).map(|r| r.0),
         _ => (),
     }
 
@@ -48,14 +48,20 @@ pub fn asset(attr: TokenStream, input: TokenStream) -> syn::Result<TokenStream> 
     }
 }
 
-fn asset_process_struct(
-    attr: TokenStream,
-    strukt: syn::ItemStruct,
-) -> Result<TokenStream, syn::Error> {
-    let _ = attr;
+fn get_full_name(struct_name: &impl ToTokens, module: Option<&syn::ItemMod>) -> TokenStream {
+    module
+        .map(|m| {
+            let mod_name = &m.ident;
+            quote! { #mod_name :: #struct_name }
+        })
+        .unwrap_or_else(|| quote! { #struct_name})
+}
 
-    let struct_name = strukt.ident.clone();
-    let passport = generate_passport(&struct_name);
+fn generate_fields(
+    strukt: &syn::ItemStruct,
+    struct_name: impl ToTokens,
+    module: Option<&syn::ItemMod>,
+) -> TokenStream {
     let fields: Vec<TokenStream> = strukt
         .fields
         .iter()
@@ -70,13 +76,15 @@ fn asset_process_struct(
         TokenStream::new()
     } else {
         let count = fields.len();
+        let full_name = get_full_name(&struct_name, module);
         quote! {
-            impl ::rsciter::som::Fields for #struct_name {
+            impl ::rsciter::som::Fields for #full_name {
                 fn fields() -> &'static [::rsciter::Result<::rsciter::som::PropertyDef>] {
                     static FIELDS: std::sync::OnceLock<[::rsciter::Result<::rsciter::som::PropertyDef>; #count]> =
                         std::sync::OnceLock::new();
 
                     use ::rsciter::impl_prop;
+                    use #full_name; // for cases Db_mod::S
 
                     FIELDS.get_or_init(|| [ #( #fields, )*  ])
                 }
@@ -84,6 +92,19 @@ fn asset_process_struct(
 
         }
     };
+
+    code
+}
+
+fn asset_process_struct(
+    attr: TokenStream,
+    strukt: syn::ItemStruct,
+) -> Result<TokenStream, syn::Error> {
+    let _ = attr;
+
+    let struct_name = strukt.ident.clone();
+    let passport = generate_passport(&struct_name, None);
+    let code = generate_fields(&strukt, &struct_name, None);
 
     Ok(quote! {
         #strukt
@@ -101,7 +122,7 @@ fn asset_process_impl_block(
     let info = SciterMod::from_impl_block(&block)?;
     let methods = generate_mod_methods(&info);
     let passport = if attr.to_string() == "HasPassport" {
-        generate_passport(info.name_path())
+        generate_passport(info.name_path(), None)
     } else {
         TokenStream::new()
     };
@@ -120,13 +141,19 @@ fn asset_process_impl_block(
 fn asset_process_module(
     attr: TokenStream,
     mut module: syn::ItemMod,
+    full: bool,
 ) -> Result<(TokenStream, syn::TypePath), syn::Error> {
     let (info, module) = SciterMod::prepare(&mut module, attr)?;
     let vis = info.visibility();
     let provider_struct_name = info.name_path();
 
     let methods = generate_mod_methods(&info);
-    let passport = generate_passport(provider_struct_name);
+    let passport = generate_passport(provider_struct_name, None);
+    let addons = if full {
+        generate_ns_items(&module)?
+    } else {
+        TokenStream::new()
+    };
     Ok((
         quote!(
             #[allow(non_snake_case)]
@@ -138,15 +165,40 @@ fn asset_process_module(
             #passport
 
             #methods
+
+            #addons
         ),
         provider_struct_name.clone(),
     ))
 }
 
-fn generate_passport(name: impl ToTokens) -> TokenStream {
+fn generate_ns_items(module: &syn::ItemMod) -> syn::Result<TokenStream> {
+    let mut result = TokenStream::new();
+    if let Some(items) = module.content.as_ref().map(|content| &content.1) {
+        for item in items.iter() {
+            match item {
+                syn::Item::Struct(s) => {
+                    let passport = generate_passport(&s.ident, Some(module));
+                    let code = generate_fields(s, &s.ident, Some(module));
+
+                    result.extend(passport);
+                    result.extend(code);
+                }
+
+                _ => (),
+            }
+        }
+    }
+
+    Ok(result)
+}
+
+fn generate_passport(name: impl ToTokens, module: Option<&syn::ItemMod>) -> TokenStream {
+    let full = get_full_name(&name, module);
     quote! {
-        impl ::rsciter::som::HasPassport for #name {
+        impl ::rsciter::som::HasPassport for #full {
             fn passport(&self) -> ::rsciter::Result<&'static ::rsciter::som::Passport> {
+                use #full; // for cases Db_mod::S
                 let passport = ::rsciter::som::impl_passport!(self, #name);
                 passport
             }
@@ -317,5 +369,22 @@ impl Namespace {
     }
 }
 "#].assert_eq(&result);
+    }
+
+    #[test]
+    fn test_asset_ns() {
+        let result = expand(
+            "",
+            r#"
+mod M {
+    use super::*;
+
+    pub struct S;
+}
+"#,
+            asset_ns,
+        );
+
+        dbg!(result);
     }
 }
