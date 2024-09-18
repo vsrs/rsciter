@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 use syn::spanned::Spanned;
@@ -38,7 +40,7 @@ pub fn asset(attr: TokenStream, input: TokenStream) -> syn::Result<TokenStream> 
     }
 
     match syn::parse2::<syn::ItemImpl>(input.clone()) {
-        Ok(impl_block) => return asset_process_impl_block(attr, impl_block),
+        Ok(impl_block) => return asset_process_impl_block(attr, &impl_block, false),
         _ => (),
     }
 
@@ -48,20 +50,7 @@ pub fn asset(attr: TokenStream, input: TokenStream) -> syn::Result<TokenStream> 
     }
 }
 
-fn get_full_name(struct_name: &impl ToTokens, module: Option<&syn::ItemMod>) -> TokenStream {
-    module
-        .map(|m| {
-            let mod_name = &m.ident;
-            quote! { #mod_name :: #struct_name }
-        })
-        .unwrap_or_else(|| quote! { #struct_name})
-}
-
-fn generate_fields(
-    strukt: &syn::ItemStruct,
-    struct_name: impl ToTokens,
-    module: Option<&syn::ItemMod>,
-) -> TokenStream {
+fn generate_fields(strukt: &syn::ItemStruct, struct_name: impl ToTokens) -> TokenStream {
     let fields: Vec<TokenStream> = strukt
         .fields
         .iter()
@@ -76,15 +65,13 @@ fn generate_fields(
         TokenStream::new()
     } else {
         let count = fields.len();
-        let full_name = get_full_name(&struct_name, module);
         quote! {
-            impl ::rsciter::som::Fields for #full_name {
+            impl ::rsciter::som::Fields for #struct_name {
                 fn fields() -> &'static [::rsciter::Result<::rsciter::som::PropertyDef>] {
                     static FIELDS: std::sync::OnceLock<[::rsciter::Result<::rsciter::som::PropertyDef>; #count]> =
                         std::sync::OnceLock::new();
 
                     use ::rsciter::impl_prop;
-                    use #full_name; // for cases Db_mod::S
 
                     FIELDS.get_or_init(|| [ #( #fields, )*  ])
                 }
@@ -103,8 +90,8 @@ fn asset_process_struct(
     let _ = attr;
 
     let struct_name = strukt.ident.clone();
-    let passport = generate_passport(&struct_name, None);
-    let code = generate_fields(&strukt, &struct_name, None);
+    let passport = generate_passport(&struct_name);
+    let code = generate_fields(&strukt, &struct_name);
 
     Ok(quote! {
         #strukt
@@ -117,19 +104,28 @@ fn asset_process_struct(
 
 fn asset_process_impl_block(
     attr: TokenStream,
-    block: syn::ItemImpl,
+    block: &syn::ItemImpl,
+    skip_block: bool,
 ) -> Result<TokenStream, syn::Error> {
-    let info = SciterMod::from_impl_block(&block)?;
+    let info = SciterMod::from_impl_block(block)?;
     let methods = generate_mod_methods(&info);
     let passport = if attr.to_string() == "HasPassport" {
-        generate_passport(info.name_path(), None)
+        generate_passport(info.name_path())
     } else {
         TokenStream::new()
     };
 
+    let block = if skip_block {
+        TokenStream::new()
+    } else {
+        quote! {
+            #[allow(non_snake_case)]
+            #[allow(dead_code)]
+            #block
+        }
+    };
+
     Ok(quote! {
-        #[allow(non_snake_case)]
-        #[allow(dead_code)]
         #block
 
         #passport
@@ -148,11 +144,11 @@ fn asset_process_module(
     let provider_struct_name = info.name_path();
 
     let methods = generate_mod_methods(&info);
-    let passport = generate_passport(provider_struct_name, None);
-    let addons = if full {
-        generate_ns_items(&module)?
+    let passport = generate_passport(provider_struct_name);
+    let (module, addons) = if full {
+        (TokenStream::new(), generate_ns_items(&module)?)
     } else {
-        TokenStream::new()
+        (module.to_token_stream(), TokenStream::new())
     };
     Ok((
         quote!(
@@ -178,11 +174,16 @@ fn generate_ns_items(module: &syn::ItemMod) -> syn::Result<TokenStream> {
         for item in items.iter() {
             match item {
                 syn::Item::Struct(s) => {
-                    let passport = generate_passport(&s.ident, Some(module));
-                    let code = generate_fields(s, &s.ident, Some(module));
+                    let passport = generate_passport(&s.ident);
+                    let code = generate_fields(s, &s.ident);
 
                     result.extend(passport);
                     result.extend(code);
+                }
+
+                syn::Item::Impl(impl_block) if impl_block.trait_.is_none() => {
+                    let methods = asset_process_impl_block(TokenStream::new(), impl_block, true);
+                    result.extend(methods);
                 }
 
                 _ => (),
@@ -190,15 +191,28 @@ fn generate_ns_items(module: &syn::ItemMod) -> syn::Result<TokenStream> {
         }
     }
 
-    Ok(result)
+    // hackish and inefficient. The better way is to reimplement ToTokens, skip last token and append result
+    let mut code = quote! {
+        #[allow(non_snake_case)]
+        #[allow(dead_code)]
+        #module
+    }
+    .to_token_stream()
+    .to_string();
+
+    code.pop(); // last '}'
+    code.push_str(&result.to_string());
+    code.push('}');
+
+    let s = TokenStream::from_str(&code)?;
+
+    Ok(s)
 }
 
-fn generate_passport(name: impl ToTokens, module: Option<&syn::ItemMod>) -> TokenStream {
-    let full = get_full_name(&name, module);
+fn generate_passport(name: impl ToTokens) -> TokenStream {
     quote! {
-        impl ::rsciter::som::HasPassport for #full {
+        impl ::rsciter::som::HasPassport for #name {
             fn passport(&self) -> ::rsciter::Result<&'static ::rsciter::som::Passport> {
-                use #full; // for cases Db_mod::S
                 let passport = ::rsciter::som::impl_passport!(self, #name);
                 passport
             }
@@ -379,12 +393,120 @@ impl Namespace {
 mod M {
     use super::*;
 
-    pub struct S;
+    pub struct NsObject {
+        pub msg: String,
+    }
+
+    impl NsObject {
+        pub fn test(&self) -> String {
+            format!("Test: {}", self.msg)
+        }
+    }
 }
 "#,
             asset_ns,
         );
 
-        dbg!(result);
+        expect![r#"
+#[allow(non_snake_case)]
+#[allow(dead_code)]
+struct M;
+impl ::rsciter::som::HasPassport for M {
+    fn passport(&self) -> ::rsciter::Result<&'static ::rsciter::som::Passport> {
+        let passport = ::rsciter::som::impl_passport!(self, M);
+        passport
+    }
+}
+impl ::rsciter::som::Methods for M {
+    fn methods() -> &'static [Result<som::MethodDef>] {
+        static METHODS: std::sync::OnceLock<[Result<som::MethodDef>; 0usize]> = std::sync::OnceLock::new();
+        METHODS.get_or_init(|| { [] })
+    }
+}
+#[allow(non_snake_case)]
+impl M {}
+#[allow(non_snake_case)]
+#[allow(dead_code)]
+mod M_mod {
+    use super::*;
+    pub struct NsObject {
+        pub msg: String,
+    }
+    impl NsObject {
+        pub fn test(&self) -> String {
+            format!("Test: {}", self.msg)
+        }
+    }
+    impl ::rsciter::som::HasPassport for NsObject {
+        fn passport(&self) -> ::rsciter::Result<&'static ::rsciter::som::Passport> {
+            let passport = ::rsciter::som::impl_passport!(self, NsObject);
+            passport
+        }
+    }
+    impl ::rsciter::som::Fields for NsObject {
+        fn fields() -> &'static [::rsciter::Result<::rsciter::som::PropertyDef>] {
+            static FIELDS: std::sync::OnceLock<
+                [::rsciter::Result<::rsciter::som::PropertyDef>; 1usize],
+            > = std::sync::OnceLock::new();
+            use ::rsciter::impl_prop;
+            FIELDS.get_or_init(|| [impl_prop!(NsObject::msg)])
+        }
+    }
+    impl ::rsciter::som::Methods for NsObject {
+        fn methods() -> &'static [Result<som::MethodDef>] {
+            static METHODS: std::sync::OnceLock<[Result<som::MethodDef>; 1usize]> = std::sync::OnceLock::new();
+            METHODS
+                .get_or_init(|| {
+                    [
+                        {
+                            unsafe extern "C" fn test_thunk(
+                                thing: *mut bindings::som_asset_t,
+                                argc: bindings::UINT,
+                                argv: *const bindings::SCITER_VALUE,
+                                p_result: *mut bindings::SCITER_VALUE,
+                            ) -> bindings::SBOOL {
+                                let args = ::rsciter::args_from_raw_parts(argv, argc);
+                                let mut asset_mut = som::AssetRefMut::<
+                                    NsObject,
+                                >::new(thing);
+                                match asset_mut.call_test(args) {
+                                    Ok(Some(res)) => {
+                                        *p_result = res.take();
+                                        1
+                                    }
+                                    Ok(_) => 1,
+                                    Err(_err) => 0,
+                                }
+                            }
+                            ::rsciter::som::Atom::new(c"test")
+                                .map(|name| ::rsciter::som::MethodDef {
+                                    reserved: std::ptr::null_mut(),
+                                    name: name.into(),
+                                    params: 0usize,
+                                    func: Some(test_thunk),
+                                })
+                        },
+                    ]
+                })
+        }
+    }
+    #[allow(non_snake_case)]
+    impl NsObject {
+        fn call_test(
+            &mut self,
+            args: &[::rsciter::Value],
+        ) -> ::rsciter::Result<Option<::rsciter::Value>> {
+            let _ = args;
+            let result = self.test();
+            ::rsciter::conv::ToValue::to_value(result).map(|res| Some(res))
+        }
+    }
+}
+impl M {
+    pub fn new() -> ::rsciter::Result<::rsciter::som::GlobalAsset<M>> {
+        ::rsciter::som::GlobalAsset::new(M)
+    }
+}
+"#].assert_eq(&result);
     }
 }

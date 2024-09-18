@@ -22,7 +22,7 @@ const HTML: &'static [u8] = br#"<html>
       console.log(`Update result: "${updateRes.message()}"`);
 
       const inner = Db.open_ns("asfd");
-      console.log(inner, inner.msg);
+      console.log(inner, inner.msg, inner.test());
     }
     console.log("End of scope");
   </script>
@@ -77,6 +77,12 @@ mod Db {
 
     pub struct NsObject {
         pub msg: String,
+    }
+
+    impl NsObject {
+        pub fn test(&self) -> String {
+            format!("Test: {}", self.msg)
+        }
     }
 
     pub fn open(path: &str, flags: u64) -> Object {
