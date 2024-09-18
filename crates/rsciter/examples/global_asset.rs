@@ -20,9 +20,6 @@ const HTML: &'static [u8] = br#"<html>
       console.log(updateRes, updateRes.message);
 
       console.log(`Update result: "${updateRes.message()}"`);
-
-      const inner = Db.open_ns("asfd");
-      console.log(inner, inner.msg, inner.test());
     }
     console.log("End of scope");
   </script>
@@ -71,29 +68,15 @@ impl UpdateRes {
     }
 }
 
-#[rsciter::asset_ns]
+#[rsciter::asset]
 mod Db {
     use super::*;
-
-    pub struct NsObject {
-        pub msg: String,
-    }
-
-    impl NsObject {
-        pub fn test(&self) -> String {
-            format!("Test: {}", self.msg)
-        }
-    }
 
     pub fn open(path: &str, flags: u64) -> Object {
         Object {
             path: path.into(),
             flags,
         }
-    }
-
-    pub fn open_ns(msg: &str) -> NsObject {
-        NsObject { msg: msg.into() }
     }
 }
 
@@ -105,7 +88,7 @@ fn try_main() -> Result<i32> {
     })?;
 
     // let _ = will drop the Db immediately!
-    let _guard = Db::new()?;
+    let _guard = som::GlobalAsset::new(Db)?;
 
     let window = Window::builder().with_html(HTML).build_main()?;
     window.show(Visibility::Normal)?;

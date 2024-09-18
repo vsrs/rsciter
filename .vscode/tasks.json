@@ -44,7 +44,10 @@
 				"$rustc",
 				"$rust-panic"
 			],
-			"label": "rust: cargo test"
+			"label": "Update expect tests",
+			"env": {
+				"UPDATE_EXPECT": "1",
+			}
 		}
 	]
 }

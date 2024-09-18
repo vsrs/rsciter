@@ -213,7 +213,8 @@ fn generate_passport(name: impl ToTokens) -> TokenStream {
     quote! {
         impl ::rsciter::som::HasPassport for #name {
             fn passport(&self) -> ::rsciter::Result<&'static ::rsciter::som::Passport> {
-                let passport = ::rsciter::som::impl_passport!(self, #name);
+                use ::rsciter::som::*;
+                let passport = impl_passport!(self, #name);
                 passport
             }
         }
@@ -231,13 +232,13 @@ fn generate_mod_methods(smod: &SciterMod) -> TokenStream {
         method_defs.push(quote! {
             {
                 unsafe extern "C" fn #thunk_name(
-                    thing: *mut bindings::som_asset_t,
-                    argc: bindings::UINT,
-                    argv: *const bindings::SCITER_VALUE,
-                    p_result: *mut bindings::SCITER_VALUE,
-                ) -> bindings::SBOOL {
+                    thing: *mut ::rsciter::bindings::som_asset_t,
+                    argc: ::rsciter::bindings::UINT,
+                    argv: *const ::rsciter::bindings::SCITER_VALUE,
+                    p_result: *mut ::rsciter::bindings::SCITER_VALUE,
+                ) -> ::rsciter::bindings::SBOOL {
                     let args = ::rsciter::args_from_raw_parts(argv, argc);
-                    let mut asset_mut = som::AssetRefMut::<#provider_struct_name>::new(thing);
+                    let mut asset_mut = ::rsciter::som::AssetRefMut::<#provider_struct_name>::new(thing);
                     match #call {
                         Ok(Some(res)) => {
                             *p_result = res.take();
@@ -267,8 +268,8 @@ fn generate_mod_methods(smod: &SciterMod) -> TokenStream {
     let count = method_defs.len();
     quote! {
         impl ::rsciter::som::Methods for #provider_struct_name {
-            fn methods() -> &'static [Result<som::MethodDef>] {
-                static METHODS: std::sync::OnceLock<[Result<som::MethodDef>; #count]> = std::sync::OnceLock::new();
+            fn methods() -> &'static [::rsciter::Result<::rsciter::som::MethodDef>] {
+                static METHODS: std::sync::OnceLock<[::rsciter::Result<::rsciter::som::MethodDef>; #count]> = std::sync::OnceLock::new();
                 METHODS.get_or_init(|| {
                     [
                         #( #method_defs )*
@@ -306,83 +307,87 @@ mod Namespace {
             asset,
         );
 
-        expect![r#"
-#[allow(non_snake_case)]
-#[allow(dead_code)]
-mod Namespace_mod {
-    pub fn open(path: &str, flags: usize) {
-        todo!()
-    }
-}
-struct Namespace;
-impl ::rsciter::som::HasPassport for Namespace {
-    fn passport(&self) -> ::rsciter::Result<&'static ::rsciter::som::Passport> {
-        let passport = ::rsciter::som::impl_passport!(self, Namespace);
-        passport
-    }
-}
-impl ::rsciter::som::Methods for Namespace {
-    fn methods() -> &'static [Result<som::MethodDef>] {
-        static METHODS: std::sync::OnceLock<[Result<som::MethodDef>; 1usize]> = std::sync::OnceLock::new();
-        METHODS
-            .get_or_init(|| {
-                [
-                    {
-                        unsafe extern "C" fn open_thunk(
-                            thing: *mut bindings::som_asset_t,
-                            argc: bindings::UINT,
-                            argv: *const bindings::SCITER_VALUE,
-                            p_result: *mut bindings::SCITER_VALUE,
-                        ) -> bindings::SBOOL {
-                            let args = ::rsciter::args_from_raw_parts(argv, argc);
-                            let mut asset_mut = som::AssetRefMut::<
-                                Namespace,
-                            >::new(thing);
-                            match asset_mut.call_open(args) {
-                                Ok(Some(res)) => {
-                                    *p_result = res.take();
-                                    1
-                                }
-                                Ok(_) => 1,
-                                Err(_err) => 0,
-                            }
-                        }
-                        ::rsciter::som::Atom::new(c"open")
-                            .map(|name| ::rsciter::som::MethodDef {
-                                reserved: std::ptr::null_mut(),
-                                name: name.into(),
-                                params: 2usize,
-                                func: Some(open_thunk),
-                            })
-                    },
-                ]
-            })
-    }
-}
-#[allow(non_snake_case)]
-impl Namespace {
-    fn call_open(
-        &mut self,
-        args: &[::rsciter::Value],
-    ) -> ::rsciter::Result<Option<::rsciter::Value>> {
-        if args.len() != 2usize {
-            return Err(::rsciter::Error::ScriptingInvalidArgCount("open".to_string()));
-        }
-        let path = <String as ::rsciter::conv::FromValue>::from_value(&args[0usize])
-            .map_err(|err| ::rsciter::Error::ScriptingInvalidArgument(
-                "path",
-                Box::new(err),
-            ))?;
-        let flags = <usize as ::rsciter::conv::FromValue>::from_value(&args[1usize])
-            .map_err(|err| ::rsciter::Error::ScriptingInvalidArgument(
-                "flags",
-                Box::new(err),
-            ))?;
-        Namespace_mod::open(&path, flags);
-        Ok(None)
-    }
-}
-"#].assert_eq(&result);
+        expect![[r##"
+            #[allow(non_snake_case)]
+            #[allow(dead_code)]
+            mod Namespace_mod {
+                pub fn open(path: &str, flags: usize) {
+                    todo!()
+                }
+            }
+            struct Namespace;
+            impl ::rsciter::som::HasPassport for Namespace {
+                fn passport(&self) -> ::rsciter::Result<&'static ::rsciter::som::Passport> {
+                    use ::rsciter::som::*;
+                    let passport = impl_passport!(self, Namespace);
+                    passport
+                }
+            }
+            impl ::rsciter::som::Methods for Namespace {
+                fn methods() -> &'static [::rsciter::Result<::rsciter::som::MethodDef>] {
+                    static METHODS: std::sync::OnceLock<
+                        [::rsciter::Result<::rsciter::som::MethodDef>; 1usize],
+                    > = std::sync::OnceLock::new();
+                    METHODS
+                        .get_or_init(|| {
+                            [
+                                {
+                                    unsafe extern "C" fn open_thunk(
+                                        thing: *mut ::rsciter::bindings::som_asset_t,
+                                        argc: ::rsciter::bindings::UINT,
+                                        argv: *const ::rsciter::bindings::SCITER_VALUE,
+                                        p_result: *mut ::rsciter::bindings::SCITER_VALUE,
+                                    ) -> ::rsciter::bindings::SBOOL {
+                                        let args = ::rsciter::args_from_raw_parts(argv, argc);
+                                        let mut asset_mut = ::rsciter::som::AssetRefMut::<
+                                            Namespace,
+                                        >::new(thing);
+                                        match asset_mut.call_open(args) {
+                                            Ok(Some(res)) => {
+                                                *p_result = res.take();
+                                                1
+                                            }
+                                            Ok(_) => 1,
+                                            Err(_err) => 0,
+                                        }
+                                    }
+                                    ::rsciter::som::Atom::new(c"open")
+                                        .map(|name| ::rsciter::som::MethodDef {
+                                            reserved: std::ptr::null_mut(),
+                                            name: name.into(),
+                                            params: 2usize,
+                                            func: Some(open_thunk),
+                                        })
+                                },
+                            ]
+                        })
+                }
+            }
+            #[allow(non_snake_case)]
+            impl Namespace {
+                fn call_open(
+                    &mut self,
+                    args: &[::rsciter::Value],
+                ) -> ::rsciter::Result<Option<::rsciter::Value>> {
+                    if args.len() != 2usize {
+                        return Err(::rsciter::Error::ScriptingInvalidArgCount("open".to_string()));
+                    }
+                    let path = <String as ::rsciter::conv::FromValue>::from_value(&args[0usize])
+                        .map_err(|err| ::rsciter::Error::ScriptingInvalidArgument(
+                            "path",
+                            Box::new(err),
+                        ))?;
+                    let flags = <usize as ::rsciter::conv::FromValue>::from_value(&args[1usize])
+                        .map_err(|err| ::rsciter::Error::ScriptingInvalidArgument(
+                            "flags",
+                            Box::new(err),
+                        ))?;
+                    Namespace_mod::open(&path, flags);
+                    Ok(None)
+                }
+            }
+        "##]]
+        .assert_eq(&result);
     }
 
     #[test]
@@ -407,106 +412,113 @@ mod M {
             asset_ns,
         );
 
-        expect![r#"
-#[allow(non_snake_case)]
-#[allow(dead_code)]
-struct M;
-impl ::rsciter::som::HasPassport for M {
-    fn passport(&self) -> ::rsciter::Result<&'static ::rsciter::som::Passport> {
-        let passport = ::rsciter::som::impl_passport!(self, M);
-        passport
-    }
-}
-impl ::rsciter::som::Methods for M {
-    fn methods() -> &'static [Result<som::MethodDef>] {
-        static METHODS: std::sync::OnceLock<[Result<som::MethodDef>; 0usize]> = std::sync::OnceLock::new();
-        METHODS.get_or_init(|| { [] })
-    }
-}
-#[allow(non_snake_case)]
-impl M {}
-#[allow(non_snake_case)]
-#[allow(dead_code)]
-mod M_mod {
-    use super::*;
-    pub struct NsObject {
-        pub msg: String,
-    }
-    impl NsObject {
-        pub fn test(&self) -> String {
-            format!("Test: {}", self.msg)
-        }
-    }
-    impl ::rsciter::som::HasPassport for NsObject {
-        fn passport(&self) -> ::rsciter::Result<&'static ::rsciter::som::Passport> {
-            let passport = ::rsciter::som::impl_passport!(self, NsObject);
-            passport
-        }
-    }
-    impl ::rsciter::som::Fields for NsObject {
-        fn fields() -> &'static [::rsciter::Result<::rsciter::som::PropertyDef>] {
-            static FIELDS: std::sync::OnceLock<
-                [::rsciter::Result<::rsciter::som::PropertyDef>; 1usize],
-            > = std::sync::OnceLock::new();
-            use ::rsciter::impl_prop;
-            FIELDS.get_or_init(|| [impl_prop!(NsObject::msg)])
-        }
-    }
-    impl ::rsciter::som::Methods for NsObject {
-        fn methods() -> &'static [Result<som::MethodDef>] {
-            static METHODS: std::sync::OnceLock<[Result<som::MethodDef>; 1usize]> = std::sync::OnceLock::new();
-            METHODS
-                .get_or_init(|| {
-                    [
-                        {
-                            unsafe extern "C" fn test_thunk(
-                                thing: *mut bindings::som_asset_t,
-                                argc: bindings::UINT,
-                                argv: *const bindings::SCITER_VALUE,
-                                p_result: *mut bindings::SCITER_VALUE,
-                            ) -> bindings::SBOOL {
-                                let args = ::rsciter::args_from_raw_parts(argv, argc);
-                                let mut asset_mut = som::AssetRefMut::<
-                                    NsObject,
-                                >::new(thing);
-                                match asset_mut.call_test(args) {
-                                    Ok(Some(res)) => {
-                                        *p_result = res.take();
-                                        1
-                                    }
-                                    Ok(_) => 1,
-                                    Err(_err) => 0,
-                                }
-                            }
-                            ::rsciter::som::Atom::new(c"test")
-                                .map(|name| ::rsciter::som::MethodDef {
-                                    reserved: std::ptr::null_mut(),
-                                    name: name.into(),
-                                    params: 0usize,
-                                    func: Some(test_thunk),
-                                })
-                        },
-                    ]
-                })
-        }
-    }
-    #[allow(non_snake_case)]
-    impl NsObject {
-        fn call_test(
-            &mut self,
-            args: &[::rsciter::Value],
-        ) -> ::rsciter::Result<Option<::rsciter::Value>> {
-            let _ = args;
-            let result = self.test();
-            ::rsciter::conv::ToValue::to_value(result).map(|res| Some(res))
-        }
-    }
-}
-impl M {
-    pub fn new() -> ::rsciter::Result<::rsciter::som::GlobalAsset<M>> {
-        ::rsciter::som::GlobalAsset::new(M)
-    }
-}
-"#].assert_eq(&result);
+        expect![[r##"
+            #[allow(non_snake_case)]
+            #[allow(dead_code)]
+            struct M;
+            impl ::rsciter::som::HasPassport for M {
+                fn passport(&self) -> ::rsciter::Result<&'static ::rsciter::som::Passport> {
+                    use ::rsciter::som::*;
+                    let passport = impl_passport!(self, M);
+                    passport
+                }
+            }
+            impl ::rsciter::som::Methods for M {
+                fn methods() -> &'static [::rsciter::Result<::rsciter::som::MethodDef>] {
+                    static METHODS: std::sync::OnceLock<
+                        [::rsciter::Result<::rsciter::som::MethodDef>; 0usize],
+                    > = std::sync::OnceLock::new();
+                    METHODS.get_or_init(|| { [] })
+                }
+            }
+            #[allow(non_snake_case)]
+            impl M {}
+            #[allow(non_snake_case)]
+            #[allow(dead_code)]
+            mod M_mod {
+                use super::*;
+                pub struct NsObject {
+                    pub msg: String,
+                }
+                impl NsObject {
+                    pub fn test(&self) -> String {
+                        format!("Test: {}", self.msg)
+                    }
+                }
+                impl ::rsciter::som::HasPassport for NsObject {
+                    fn passport(&self) -> ::rsciter::Result<&'static ::rsciter::som::Passport> {
+                        use ::rsciter::som::*;
+                        let passport = impl_passport!(self, NsObject);
+                        passport
+                    }
+                }
+                impl ::rsciter::som::Fields for NsObject {
+                    fn fields() -> &'static [::rsciter::Result<::rsciter::som::PropertyDef>] {
+                        static FIELDS: std::sync::OnceLock<
+                            [::rsciter::Result<::rsciter::som::PropertyDef>; 1usize],
+                        > = std::sync::OnceLock::new();
+                        use ::rsciter::impl_prop;
+                        FIELDS.get_or_init(|| [impl_prop!(NsObject::msg)])
+                    }
+                }
+                impl ::rsciter::som::Methods for NsObject {
+                    fn methods() -> &'static [::rsciter::Result<::rsciter::som::MethodDef>] {
+                        static METHODS: std::sync::OnceLock<
+                            [::rsciter::Result<::rsciter::som::MethodDef>; 1usize],
+                        > = std::sync::OnceLock::new();
+                        METHODS
+                            .get_or_init(|| {
+                                [
+                                    {
+                                        unsafe extern "C" fn test_thunk(
+                                            thing: *mut ::rsciter::bindings::som_asset_t,
+                                            argc: ::rsciter::bindings::UINT,
+                                            argv: *const ::rsciter::bindings::SCITER_VALUE,
+                                            p_result: *mut ::rsciter::bindings::SCITER_VALUE,
+                                        ) -> ::rsciter::bindings::SBOOL {
+                                            let args = ::rsciter::args_from_raw_parts(argv, argc);
+                                            let mut asset_mut = ::rsciter::som::AssetRefMut::<
+                                                NsObject,
+                                            >::new(thing);
+                                            match asset_mut.call_test(args) {
+                                                Ok(Some(res)) => {
+                                                    *p_result = res.take();
+                                                    1
+                                                }
+                                                Ok(_) => 1,
+                                                Err(_err) => 0,
+                                            }
+                                        }
+                                        ::rsciter::som::Atom::new(c"test")
+                                            .map(|name| ::rsciter::som::MethodDef {
+                                                reserved: std::ptr::null_mut(),
+                                                name: name.into(),
+                                                params: 0usize,
+                                                func: Some(test_thunk),
+                                            })
+                                    },
+                                ]
+                            })
+                    }
+                }
+                #[allow(non_snake_case)]
+                impl NsObject {
+                    fn call_test(
+                        &mut self,
+                        args: &[::rsciter::Value],
+                    ) -> ::rsciter::Result<Option<::rsciter::Value>> {
+                        let _ = args;
+                        let result = self.test();
+                        ::rsciter::conv::ToValue::to_value(result).map(|res| Some(res))
+                    }
+                }
+            }
+            impl M {
+                pub fn new() -> ::rsciter::Result<::rsciter::som::GlobalAsset<M>> {
+                    ::rsciter::som::GlobalAsset::new(M)
+                }
+            }
+        "##]]
+        .assert_eq(&result);
     }
 }

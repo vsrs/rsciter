@@ -167,6 +167,7 @@ macro_rules! impl_item_getter {
             p_key: *const ::rsciter::bindings::SCITER_VALUE,
             p_value: *mut ::rsciter::bindings::SCITER_VALUE,
         ) -> ::rsciter::bindings::SBOOL {
+            use rsciter::AsValueRef;
             let key = p_key.as_value_ref();
             let asset_ref = ::rsciter::som::AssetRef::<$type>::new(thing);
             let Ok(Some(res)) = (&mut &asset_ref.data()).do_get_item(key) else {
@@ -190,6 +191,7 @@ macro_rules! impl_item_setter {
             p_key: *const ::rsciter::bindings::SCITER_VALUE,
             p_value: *const ::rsciter::bindings::SCITER_VALUE,
         ) -> ::rsciter::bindings::SBOOL {
+            use rsciter::AsValueRef;
             let key = p_key.as_value_ref();
             let value = p_value.as_value_ref();
             let asset_ref = ::rsciter::som::AssetRef::<$type>::new(thing);
@@ -452,14 +454,14 @@ impl<T: HasPassport> GlobalAsset<T> {
 #[macro_export]
 macro_rules! impl_passport {
     ($self:ident, $type:ident) => {{
-        static PASSPORT: std::sync::OnceLock<Result<bindings::som_passport_t>> =
+        static PASSPORT: std::sync::OnceLock<::rsciter::Result<::rsciter::bindings::som_passport_t>> =
             std::sync::OnceLock::new();
 
         let res = PASSPORT.get_or_init(|| {
             let mut passport =
                 ::rsciter::bindings::som_passport_t::new(::rsciter::cstr!($type))?;
             use ::rsciter::som::{
-                self, HasFields, HasItemGetter, HasItemSetter, HasMethods, HasVirtualProperties,
+                self, HasFields, HasItemGetter, HasItemSetter, HasMethods, HasVirtualProperties
             };
 
             let autoref_trick = &mut &$self;
