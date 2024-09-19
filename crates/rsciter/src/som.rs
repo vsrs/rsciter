@@ -380,15 +380,15 @@ impl<T: Methods> HasMethods for &mut &&T {
     }
 }
 
-pub trait IAsset<T: HasPassport>: Sized {
-    fn class() -> som_asset_class_t;
+trait IAsset {
+    fn class() -> som_asset_class_t where Self: Sized;
 }
 
 pub struct GlobalAsset<T: HasPassport> {
     ptr: *mut AssetData<T>,
 }
 
-impl<T: HasPassport> IAsset<T> for GlobalAsset<T> {
+impl<T: HasPassport> IAsset for GlobalAsset<T> {
     fn class() -> som_asset_class_t {
         // global assets are not ref-counted.
         unsafe extern "C" fn ref_count_stub(_thing: *mut som_asset_t) -> c_long {
@@ -611,7 +611,7 @@ impl<T> AssetDataWithCounter<T> {
     }
 }
 
-impl<T: HasPassport> IAsset<T> for Asset<T> {
+impl<T: HasPassport> IAsset for Asset<T> {
     fn class() -> som_asset_class_t {
         unsafe extern "C" fn asset_add_ref<TT>(thing: *mut som_asset_t) -> c_long {
             let this = AssetDataWithCounter::<TT>::get_mut_ref(thing);

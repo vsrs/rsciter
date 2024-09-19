@@ -10,36 +10,24 @@ fn main() {
 
 const HTML: &'static [u8] = include_bytes!("./window_asset.html");
 
+#[rsciter::asset]
+struct AssetName {
+    test: u32,
+}
+
 fn try_main() -> Result<i32> {
     app::init()?;
 
-    let _window = Window::builder()
-        .with_event_handler(AssetHandler)
+    let window = Window::builder()
+        .with_asset(AssetName { test: 37 })
         .with_html(HTML)
         .build_main()?;
+
+    window.show(Visibility::Normal)?;
 
     let exit_code = app::run()?;
 
     app::shutdown()?;
 
     Ok(exit_code)
-}
-
-struct AssetHandler;
-
-impl<'a> EventHandler<'a> for AssetHandler {
-    fn on_passport(
-        &'a mut self,
-        he: bindings::HELEMENT,
-    ) -> Result<Option<&'a bindings::som_passport_t>> {
-        let _ = he;
-
-        todo!()
-    }
-
-    fn on_asset(&'a mut self, he: bindings::HELEMENT) -> Result<Option<&'a bindings::som_asset_t>> {
-        let _ = he;
-
-        todo!()
-    }
 }
