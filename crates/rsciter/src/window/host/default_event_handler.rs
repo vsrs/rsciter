@@ -1,11 +1,10 @@
 use std::collections::HashMap;
 
-use crate::{som::HasPassport, EventHandler, Result, Value, XFunction, XFunctionProvider};
+use crate::{EventHandler, Result, Value, XFunction, XFunctionProvider};
 
 pub struct DefaultEventHandler {
     functions: HashMap<String, Box<dyn XFunction>>,
     modules: Vec<Box<dyn XFunctionProvider>>,
-    asset: Option<Box<dyn HasPassport>>,
     custom_handler: Option<Box<dyn for<'s> EventHandler<'s>>>,
 }
 
@@ -13,23 +12,17 @@ impl DefaultEventHandler {
     pub fn new(
         functions: HashMap<String, Box<dyn XFunction>>,
         modules: Vec<Box<dyn XFunctionProvider>>,
-        asset: Option<Box<dyn HasPassport>>
     ) -> Self {
         Self {
             functions,
             modules,
-            asset,
             custom_handler: None,
         }
     }
 
     pub fn with_module(provider: impl XFunctionProvider) -> Self {
         let boxed: Box<dyn XFunctionProvider> = Box::new(provider);
-        Self::new(Default::default(), vec![boxed], None)
-    }
-
-    pub fn with_asset(asset: impl HasPassport + 'static) -> Self {
-        Self::new(Default::default(), Default::default(), Some(Box::new(asset)))
+        Self::new(Default::default(), vec![boxed])
     }
 
     pub fn xcall(&mut self, name: &str, args: &[Value]) -> Result<Option<Value>> {
@@ -240,12 +233,6 @@ impl<'s> EventHandler<'s> for DefaultEventHandler {
             return custom.on_passport(he);
         }
 
-        dbg!(he);
-
-        if let Some(asset) = self.asset.as_ref() {
-            return Ok(Some(asset.as_ref().passport()?));
-        }
-
         Ok(None)
     }
 
@@ -256,8 +243,6 @@ impl<'s> EventHandler<'s> for DefaultEventHandler {
         if let Some(custom) = self.custom_handler.as_mut() {
             return custom.on_asset(he);
         }
-
-        dbg!(he);
 
         Ok(None)
     }

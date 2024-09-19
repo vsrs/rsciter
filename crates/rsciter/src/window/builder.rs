@@ -2,7 +2,8 @@ use std::{collections::HashMap, pin::Pin};
 
 use super::{HostNotifications, Window, WindowDelegate, WindowFlags, WindowHandle, WindowState};
 use crate::{
-    api::sapi, bindings::*, som::{self, HasPassport}, ArchiveData, DefaultEventHandler, DefaultHost, EventHandler, Result, XFunction, XFunctionProvider
+    api::sapi, bindings::*, ArchiveData, DefaultEventHandler, DefaultHost, EventHandler, Result,
+    XFunction, XFunctionProvider,
 };
 
 // Some rust black magic to disallow
@@ -239,7 +240,6 @@ impl<'b, const ANY_INITIAL_PAGE: u8> WindowBuilder<'b, HOST_NONE, ANY_INITIAL_PA
                 archive_uri: None,
                 functions: Default::default(),
                 modules: Default::default(),
-                asset: None
             },
         }
     }
@@ -257,10 +257,6 @@ impl<'b, const ANY_INITIAL_PAGE: u8> WindowBuilder<'b, HOST_NONE, ANY_INITIAL_PA
         provider: impl XFunctionProvider,
     ) -> WindowBuilder<'b, HOST_DEFAULT, ANY_INITIAL_PAGE> {
         self.with_default_host().with_xmodule(provider)
-    }
-
-    pub fn with_asset(self, asset: impl HasPassport + 'static) -> WindowBuilder<'b, HOST_DEFAULT, ANY_INITIAL_PAGE> {
-        self.with_default_host().with_asset(asset)
     }
 }
 
@@ -308,16 +304,6 @@ impl<'b, const ANY_INITIAL_PAGE: u8> WindowBuilder<'b, HOST_DEFAULT, ANY_INITIAL
         }
         self
     }
-
-    pub fn with_asset(mut self, an_asset: impl HasPassport + 'static) -> Self {
-        match &mut self.host {
-            Host::Default { asset, .. } => {
-                asset.replace(Box::new(an_asset));
-            }
-            _ => unreachable!(),
-        }
-        self
-    }
 }
 
 const HOST_NONE: u8 = 0;
@@ -352,7 +338,6 @@ enum Host {
         archive_uri: Option<String>,
         functions: HashMap<String, Box<dyn XFunction>>,
         modules: Vec<Box<dyn XFunctionProvider>>,
-        asset: Option<Box<dyn HasPassport>>,
     },
     Custom(Box<dyn HostNotifications>),
 }
@@ -367,10 +352,9 @@ impl HostInfo {
         host: Box<dyn HostNotifications>,
         functions: HashMap<String, Box<dyn XFunction>>,
         modules: Vec<Box<dyn XFunctionProvider>>,
-        asset: Option<Box<dyn HasPassport>>
     ) -> Self {
-        let event_handler = if !functions.is_empty() || !modules.is_empty() || asset.is_some() {
-            Some(DefaultEventHandler::new(functions, modules, asset))
+        let event_handler = if !functions.is_empty() || !modules.is_empty() {
+            Some(DefaultEventHandler::new(functions, modules))
         } else {
             None
         };
@@ -405,7 +389,6 @@ impl Host {
                 archive_uri,
                 functions,
                 modules,
-                asset
             } => {
                 let mut host = archive_uri
                     .map(DefaultHost::with_archive_uri)
@@ -415,7 +398,7 @@ impl Host {
                     host.set_archive(archive_data)?;
                 }
 
-                Ok(HostInfo::new(Box::new(host), functions, modules, asset))
+                Ok(HostInfo::new(Box::new(host), functions, modules))
             }
             Host::Custom(host) => Ok(HostInfo::with_host(host)),
         }

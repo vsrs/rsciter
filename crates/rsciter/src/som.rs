@@ -381,7 +381,9 @@ impl<T: Methods> HasMethods for &mut &&T {
 }
 
 trait IAsset {
-    fn class() -> som_asset_class_t where Self: Sized;
+    fn class() -> som_asset_class_t
+    where
+        Self: Sized;
 }
 
 pub struct GlobalAsset<T: HasPassport> {
