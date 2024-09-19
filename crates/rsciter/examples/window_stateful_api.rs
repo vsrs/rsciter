@@ -35,7 +35,7 @@ fn try_main() -> Result<i32> {
     app::init()?;
 
     let _window = Window::builder()
-        .with_module(StatefullApi { state: 14 })
+        .with_xmodule(StatefullApi { state: 14 })
         .with_html(HTML)
         .build_main()?;
 

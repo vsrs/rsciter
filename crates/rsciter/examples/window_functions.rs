@@ -27,9 +27,9 @@ fn try_main() -> Result<i32> {
     app::init()?;
 
     let _window = Window::builder()
-        .with_function("printArgs", print_args)
-        .with_function("return13", |_args: &[Value]| Value::int(13).map(Some))
-        .with_module(NativeModule)
+        .with_xfunction("printArgs", print_args)
+        .with_xfunction("return13", |_args: &[Value]| Value::int(13).map(Some))
+        .with_xmodule(NativeModule)
         .with_html(HTML)
         .build_main()?;
 

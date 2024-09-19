@@ -244,19 +244,19 @@ impl<'b, const ANY_INITIAL_PAGE: u8> WindowBuilder<'b, HOST_NONE, ANY_INITIAL_PA
         }
     }
 
-    pub fn with_function(
+    pub fn with_xfunction(
         self,
         name: impl AsRef<str>,
         func: impl XFunction,
     ) -> WindowBuilder<'b, HOST_DEFAULT, ANY_INITIAL_PAGE> {
-        self.with_default_host().with_function(name, func)
+        self.with_default_host().with_xfunction(name, func)
     }
 
-    pub fn with_module(
+    pub fn with_xmodule(
         self,
         provider: impl XFunctionProvider,
     ) -> WindowBuilder<'b, HOST_DEFAULT, ANY_INITIAL_PAGE> {
-        self.with_default_host().with_module(provider)
+        self.with_default_host().with_xmodule(provider)
     }
 }
 
@@ -285,7 +285,7 @@ impl<'b, const ANY_INITIAL_PAGE: u8> WindowBuilder<'b, HOST_DEFAULT, ANY_INITIAL
         self
     }
 
-    pub fn with_function(mut self, name: impl AsRef<str>, func: impl XFunction) -> Self {
+    pub fn with_xfunction(mut self, name: impl AsRef<str>, func: impl XFunction) -> Self {
         match &mut self.host {
             Host::Default { functions, .. } => {
                 functions.insert(name.as_ref().to_string(), Box::new(func));
@@ -295,7 +295,7 @@ impl<'b, const ANY_INITIAL_PAGE: u8> WindowBuilder<'b, HOST_DEFAULT, ANY_INITIAL
         self
     }
 
-    pub fn with_module(mut self, provider: impl XFunctionProvider) -> Self {
+    pub fn with_xmodule(mut self, provider: impl XFunctionProvider) -> Self {
         match &mut self.host {
             Host::Default { modules, .. } => {
                 modules.push(Box::new(provider));
