@@ -12,7 +12,7 @@ const HTML: &'static [u8] = br#"<html>
     const obj = Db.open("test.db", 4);
     console.log(`open result: "${obj}, ${obj.path}, ${obj.flags}"`);
 
-    const updateRes = obj.update("value");
+    const updateRes = obj.update("new data");
     console.log(updateRes, updateRes.message);
 
     console.log(`Update result: "${updateRes.message()}"`);
@@ -42,7 +42,7 @@ mod Db {
     impl Object {
         pub fn update(&self, value: &str) -> UpdateRes {
             UpdateRes(format!(
-                "Updating: {value} for {} with {}",
+                "Updating: `{value}` for `{}` with `{}`",
                 self.path, self.flags
             ))
         }

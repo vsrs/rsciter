@@ -12,7 +12,8 @@ This is a work in progress library and is not yet ready for production use.
 - Uses [bindgen](https://github.com/rust-lang/rust-bindgen) instead of hand-written code.
 - Utilizes Sciter's own functions for windows/application management.
 - The primary goal is not to provide a complete Sciter API, but to simplify the interaction between the backend (in Rust) and the frontend (Sciter.JS UI).
-  For example, exporting functions is as easy as:  
+
+## Exporting xfunctions (e.g. functions available via [window.xcall](https://docs.sciter.com/docs/DOM/Window#xcall))
   ```rust
   #[rsciter::xmod] // mark the module, that's it!
   mod NativeModule {
@@ -20,28 +21,57 @@ This is a work in progress library and is not yet ready for production use.
       pub fn user_name() -> String { ... }
   }
   ```
-
-  ```rust
-  struct StatefullApi {
-      state: u64,
-  }
-
-  #[rsciter::xmod] // or struct impl block
-  impl StatefullApi {
-      pub fn sum(&self, a: u64, b: u64) -> u64 {
-          a + b + self.state
-      }
-
-      pub fn update(&mut self, a: u64) {
-          self.state = a;
-      }
-
-      pub fn state(&self) -> u64 {
-          self.state
-      }
-  }
+  JS side:
+  ```js
+  const sum = Window.this.xcall("sum", 12, 12);
   ```
-
   For details, see this samples:
   - [./crates/rsciter/examples/window_functions.rs](https://github.com/vsrs/rsciter/blob/master/crates/rsciter/examples/window_functions.rs#L15)
   - [./crates/rsciter/examples/window_stateful_api.rs](https://github.com/vsrs/rsciter/blob/master/crates/rsciter/examples/window_stateful_api.rs#L15) 
+
+## Sciter Object Model support
+You can export entire backend module with a single `#[rsciter::asset_ns]` macro:
+```rust
+#[rsciter::asset_ns]
+mod Db {
+    // exported Db.open function
+    pub fn open(path: &str, flags: u64) -> Object {...}
+
+    // exported struct with fields
+    pub struct Object {
+        path: String,
+        flags: u64,
+    }
+
+    // additionally export update method
+    impl Object {
+        pub fn update(&self, value: &str) -> UpdateRes {...}
+    }
+
+    // exported struct with `message` method
+    struct UpdateRes(String);
+    impl UpdateRes {
+        pub fn message(&self) -> &str {
+            &self.0
+        }
+    }
+}
+```
+JS side:
+```js
+const obj = Db.open("test.db", 4);
+console.log(`open result: "${obj}, ${obj.path}, ${obj.flags}"`);
+// open result: "[asset Object], test.db, 4"
+
+const updateRes = obj.update("new data");
+console.log(updateRes, updateRes.message);
+// [asset UpdateRes] function () {
+//    [native code]
+// }
+
+console.log(`Update result: "${updateRes.message()}"`);
+// Update result: "Updating: `new data` for `test.db` with `4`"
+```
+SOM samples:
+  - [./crates/rsciter/examples/asset_ns.rs](https://github.com/vsrs/rsciter/blob/master/crates/rsciter/examples/asset_ns.rs#L28)
+  - [./crates/rsciter/examples/global_asset.rs](https://github.com/vsrs/rsciter/blob/master/crates/rsciter/examples/global_asset.rs#L33) 
