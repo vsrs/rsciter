@@ -2,7 +2,7 @@ use std::{collections::HashMap, pin::Pin};
 
 use super::{HostNotifications, Window, WindowDelegate, WindowFlags, WindowHandle, WindowState};
 use crate::{
-    api::sapi, bindings::*, som::{self, HasPassport}, ArchiveData, DefaultEventHandler, DefaultHost, EventHandler, Result, XFunction, XFunctionProvider
+    api::sapi, bindings::*, som::{HasPassport, IAsset, Asset}, ArchiveData, DefaultEventHandler, DefaultHost, EventHandler, Result, XFunction, XFunctionProvider
 };
 
 // Some rust black magic to disallow
@@ -312,7 +312,9 @@ impl<'b, const ANY_INITIAL_PAGE: u8> WindowBuilder<'b, HOST_DEFAULT, ANY_INITIAL
     pub fn with_asset(mut self, an_asset: impl HasPassport + 'static) -> Self {
         match &mut self.host {
             Host::Default { asset, .. } => {
-                asset.replace(Box::new(an_asset));
+                let tmp = Asset::new(an_asset);
+                tmp.as_raw_asset().add_ref();
+                asset.replace(Box::new(tmp));
             }
             _ => unreachable!(),
         }
@@ -352,7 +354,7 @@ enum Host {
         archive_uri: Option<String>,
         functions: HashMap<String, Box<dyn XFunction>>,
         modules: Vec<Box<dyn XFunctionProvider>>,
-        asset: Option<Box<dyn HasPassport>>,
+        asset: Option<Box<dyn IAsset>>,
     },
     Custom(Box<dyn HostNotifications>),
 }
@@ -367,7 +369,7 @@ impl HostInfo {
         host: Box<dyn HostNotifications>,
         functions: HashMap<String, Box<dyn XFunction>>,
         modules: Vec<Box<dyn XFunctionProvider>>,
-        asset: Option<Box<dyn HasPassport>>
+        asset: Option<Box<dyn IAsset>>
     ) -> Self {
         let event_handler = if !functions.is_empty() || !modules.is_empty() || asset.is_some() {
             Some(DefaultEventHandler::new(functions, modules, asset))

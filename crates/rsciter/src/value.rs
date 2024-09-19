@@ -171,9 +171,9 @@ impl Value {
         Ok(this)
     }
 
-    pub fn asset<T: HasPassport>(asset: Asset<T>) -> Result<Self> {
+    pub fn asset<T: HasPassport>(asset: T) -> Result<Self> {
         let mut this = Self::new();
-        let ptr = asset.to_raw_ptr();
+        let ptr = Asset::new(asset).to_raw_ptr();
         sapi()?.value_int64_data_set(&mut this.0, ptr as i64, VALUE_TYPE::T_ASSET, None)?;
         Ok(this)
     }

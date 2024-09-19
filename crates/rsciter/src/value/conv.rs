@@ -1,6 +1,6 @@
 use super::Value;
 use crate::{
-    som::{Asset, HasPassport},
+    som::HasPassport,
     Error, Result,
 };
 
@@ -220,6 +220,6 @@ where
 
 impl<T: HasPassport> ToValue for T {
     fn to_value(val: Self) -> Result<Value> {
-        Value::asset(Asset::new(val))
+        Value::asset(val)
     }
 }

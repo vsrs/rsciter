@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
-use crate::{som::HasPassport, EventHandler, Result, Value, XFunction, XFunctionProvider};
+use crate::{som::{Asset, HasPassport, IAsset}, EventHandler, Result, Value, XFunction, XFunctionProvider};
 
 pub struct DefaultEventHandler {
     functions: HashMap<String, Box<dyn XFunction>>,
     modules: Vec<Box<dyn XFunctionProvider>>,
-    asset: Option<Box<dyn HasPassport>>,
+    asset: Option<Box<dyn IAsset>>,
     custom_handler: Option<Box<dyn for<'s> EventHandler<'s>>>,
 }
 
@@ -13,7 +13,7 @@ impl DefaultEventHandler {
     pub fn new(
         functions: HashMap<String, Box<dyn XFunction>>,
         modules: Vec<Box<dyn XFunctionProvider>>,
-        asset: Option<Box<dyn HasPassport>>
+        asset: Option<Box<dyn IAsset>>
     ) -> Self {
         Self {
             functions,
@@ -29,7 +29,7 @@ impl DefaultEventHandler {
     }
 
     pub fn with_asset(asset: impl HasPassport + 'static) -> Self {
-        Self::new(Default::default(), Default::default(), Some(Box::new(asset)))
+        Self::new(Default::default(), Default::default(), Some(Box::new(Asset::new(asset))))
     }
 
     pub fn xcall(&mut self, name: &str, args: &[Value]) -> Result<Option<Value>> {
@@ -236,14 +236,18 @@ impl<'s> EventHandler<'s> for DefaultEventHandler {
         &'s mut self,
         he: crate::bindings::HELEMENT,
     ) -> Result<Option<&'s crate::bindings::som_passport_t>> {
+        if !he.is_null() {
+            // we can provide the asset for a window only
+            return Ok(None);
+        }
+
         if let Some(custom) = self.custom_handler.as_mut() {
             return custom.on_passport(he);
         }
 
-        dbg!(he);
-
         if let Some(asset) = self.asset.as_ref() {
-            return Ok(Some(asset.as_ref().passport()?));
+            // SAFETY: unwrap here is safe as we always provide asset_get_passport callback
+            return Ok(Some(asset.as_raw_asset().passport().unwrap()));
         }
 
         Ok(None)
@@ -257,7 +261,9 @@ impl<'s> EventHandler<'s> for DefaultEventHandler {
             return custom.on_asset(he);
         }
 
-        dbg!(he);
+        if let Some(asset) = self.asset.as_ref() {
+            return Ok(Some(asset.as_raw_asset().as_ref()));
+        }
 
         Ok(None)
     }

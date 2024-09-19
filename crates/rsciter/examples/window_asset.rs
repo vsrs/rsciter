@@ -11,15 +11,19 @@ fn main() {
 const HTML: &'static [u8] = include_bytes!("./window_asset.html");
 
 #[rsciter::asset]
-struct AssetName {
+struct Backend {
     test: u32,
 }
 
 fn try_main() -> Result<i32> {
     app::init()?;
 
+    let _v = setup_debug_output(|sub, sev, text| {
+        eprintln!("Sub: {:?}, Level: {:?}, {text}", sub, sev);
+    })?;
+
     let window = Window::builder()
-        .with_asset(AssetName { test: 37 })
+        .with_asset(Backend { test: 37 })
         .with_html(HTML)
         .build_main()?;
 
